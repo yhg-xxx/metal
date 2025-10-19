@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.Mental" parent="Theme.AppCompat.Light.NoActionBar" />
+    
+    <!-- 开屏广告页面专用主题，无ActionBar和状态栏 -->
+    <style name="Theme.Mental.NoActionBar" parent="Theme.Mental">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowTranslucentStatus">true</item>
+        <item name="android:windowTranslucentNavigation">true</item>
+    </style>
+</resources>

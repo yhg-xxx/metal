@@ -1,0 +1,34 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/psychological_consultation_system?useSSL=false
+    username: root
+    password: 123456
+  ai:
+    openai:
+      api-key: sk-d1b70d8a21fc4337ae08674ee7608184
+      base-url: https://api.deepseek.com
+      chat:
+        options:
+          model:
+            deepseek-chat
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 30MB
+      enabled: true
+      file-size-threshold: 2MB
+
+mybatis-plus:
+  type-aliases-package: com.example.entity
+
+logging:
+  level:
+    com.example: debug
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  charset:
+    console: UTF-8

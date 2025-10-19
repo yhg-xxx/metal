@@ -1,0 +1,117 @@
+# ==================== 通用忽略规则 ====================
+# 系统文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# 日志文件
+*.log
+logs/
+*.logs
+
+# 环境变量文件
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 临时文件
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# ==================== IDE 配置 ====================
+# IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Android Studio
+.gradle/
+build/
+captures/
+*.apk
+*.aar
+*.ap_
+*.aab
+
+# VS Code
+.vscode/
+
+# ==================== 后端通用规则 ====================
+# 编译输出
+target/
+build/
+dist/
+out/
+bin/
+
+# 依赖包
+node_modules/
+vendor/
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# 缓存
+.cache/
+
+# ==================== Java 后端 ====================
+# Maven
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+
+# Gradle
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**
+!**/src/test/**
+
+# ==================== 安卓特定规则 ====================
+# Android built
+*.apk
+*.aab
+*.ap_
+*.aab
+
+# Android Studio
+*.iml
+.gradle/
+local.properties
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/
+!**/src/test/
+
+# Keystore files
+*.jks
+*.keystore
+
+# Google Services (Google Analytics, Firebase)
+google-services.json
+
+# External native build folder
+.externalNativeBuild/
+.cxx/
+
+# ==================== 数据库 ====================
+*.db
+*.sqlite
+*.sqlite3

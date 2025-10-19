@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.CounselorsMapper">
+
+    <!-- 根据关键词搜索咨询师 -->
+    <select id="searchByKeyword" resultType="com.example.entity.Counselors">
+        SELECT c.*
+        FROM counselors c
+        LEFT JOIN users u ON c.user_id = u.id
+        WHERE c.status = 'APPROVED'
+          AND (
+                  c.real_name LIKE CONCAT('%', #{keyword}, '%')
+               OR c.specialization LIKE CONCAT('%', #{keyword}, '%')
+               OR c.therapeutic_approach LIKE CONCAT('%', #{keyword}, '%')
+               OR c.introduction LIKE CONCAT('%', #{keyword}, '%')
+               OR u.nickname LIKE CONCAT('%', #{keyword}, '%')
+          )
+    </select>
+
+    <!-- 根据标签筛选咨询师 -->
+    <select id="filterByTags" resultType="com.example.entity.Counselors">
+        SELECT c.*
+        FROM counselors c
+        LEFT JOIN users u ON c.user_id = u.id
+        LEFT JOIN counselor_service_settings css ON c.id = css.counselor_id
+        WHERE c.status = 'APPROVED'
+        
+        <!-- 擅长领域筛选 -->
+        <if test="specializationTags != null and specializationTags.size() > 0">
+            AND (
+                <foreach collection="specializationTags" item="tag" separator=" OR ">
+                    c.specialization LIKE CONCAT('%', #{tag}, '%')
+                </foreach>
+            )
+        </if>
+        
+        <!-- 治疗流派筛选 -->
+        <if test="approachTags != null and approachTags.size() > 0">
+            AND (
+                <foreach collection="approachTags" item="tag" separator=" OR ">
+                    c.therapeutic_approach LIKE CONCAT('%', #{tag}, '%')
+                </foreach>
+            )
+        </if>
+        
+        <!-- 服务类型筛选 -->
+        <if test="serviceTypeTags != null and serviceTypeTags.size() > 0">
+            AND (
+                <foreach collection="serviceTypeTags" item="tag" separator=" OR ">
+                    css.service_types LIKE CONCAT('%', #{tag}, '%')
+                </foreach>
+            )
+        </if>
+        
+        <!-- 性别筛选 -->
+        <if test="gender != null and gender != ''">
+            AND u.gender = #{gender}
+        </if>
+    </select>
+
+</mapper>
