@@ -68,6 +68,18 @@
             android:exported="false"
             android:theme="@style/Theme.Mental.NoActionBar"
             android:windowSoftInputMode="stateHidden|adjustResize" />
+        <activity
+            android:name=".ui.features.VideoPlayerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Mental.NoActionBar" />
+        <activity
+            android:name=".ui.features.TestQuestionsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Mental.NoActionBar" />
+        <activity
+            android:name=".ui.features.AssessmentReportActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Mental.NoActionBar" />
 
     </application>
 

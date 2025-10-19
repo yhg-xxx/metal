@@ -18,10 +18,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.example.ui.navigation.BottomNavigationBar
 import com.example.ui.navigation.BottomNavigationItem
 import com.example.ui.features.CounselorSearchActivity
-import com.example.ui.screens.DynamicScreen
+import com.example.ui.screens.LearningScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.MessageScreen
-import com.example.ui.screens.MeditationScreen
+
 import com.example.ui.screens.ProfileScreen
 import com.example.ui.theme.MentalTheme
 
@@ -71,8 +71,8 @@ fun MainScreen(navigateToSearch: () -> Unit) {
                 onNavigateToSearch = navigateToSearch
             )
             BottomNavigationItem.MESSAGE -> MessageScreen(modifier)
-            BottomNavigationItem.MEDITATION -> MeditationScreen(modifier)
-            BottomNavigationItem.DYNAMIC -> DynamicScreen(modifier)
+
+            BottomNavigationItem.LEARNING -> LearningScreen(modifier)
             BottomNavigationItem.PROFILE -> ProfileScreen(modifier)
         }
     }

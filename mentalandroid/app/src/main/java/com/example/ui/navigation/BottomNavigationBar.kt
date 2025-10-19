@@ -4,8 +4,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Star
+
+import androidx.compose.material.icons.filled.Book
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -73,8 +73,7 @@ enum class BottomNavigationItem(
 ) {
     HOME("首页", Icons.Filled.Home),
     MESSAGE("消息", Icons.Filled.Call),
-    MEDITATION("冥想", Icons.Filled.PlayArrow),
-    DYNAMIC("动态", Icons.Filled.Star),
+    LEARNING("学习", Icons.Filled.Book),
     PROFILE("我的", Icons.Filled.Person)
 }
 

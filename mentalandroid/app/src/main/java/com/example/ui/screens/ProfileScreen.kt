@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -84,12 +85,13 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
         }
         
         // 用户信息卡片
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.White)
-                .padding(16.dp)
-        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White)
+                    .padding(16.dp)
+                    .clip(RoundedCornerShape(10.dp))
+            ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // 用户头像
                 val currentUser = loggedInUser
@@ -171,9 +173,62 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
             }
         }
         
+        // 功能菜单
+        Column(modifier = Modifier.padding(16.dp)) {
+            // 推荐学习入口
+            ProfileMenuItem(
+                title = "推荐学习",
+                description = "查看为您定制的学习内容",
+                onClick = { /* 跳转到推荐学习页面 */ }
+            )
+            
+            // 评估记录入口
+            ProfileMenuItem(
+                title = "评估记录",
+                description = "查看心理状态评估报告",
+                onClick = { /* 跳转到评估记录页面 */ }
+            )
+        }
+        
         // 底部间距
         Spacer(modifier = Modifier.weight(1f))
     }
+}
+
+/**
+ * 个人中心菜单项组件
+ */
+@Composable
+private fun ProfileMenuItem(title: String, description: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White)
+            .clip(RoundedCornerShape(8.dp))
+            .padding(16.dp)
+            .clickable(onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = description,
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
+        }
+        Icon(
+            imageVector = Icons.Filled.ArrowForward,
+            contentDescription = "进入",
+            tint = Color.Gray
+        )
+    }
+    Spacer(modifier = Modifier.height(12.dp))
 }
 
 @Preview(showBackground = true)
