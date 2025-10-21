@@ -177,15 +177,28 @@ fun QuickConsultationScreen() {
     
     Scaffold(
         topBar = {
+            // 使用与首页一致的TopAppBar实现
             TopAppBar(
                 title = {
-                    Text(text = "快速咨询", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "快速咨询", 
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = { (context as Activity).finish() }) {
-                        Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(
+                            imageVector = Icons.Filled.ArrowBack, 
+                            contentDescription = "返回",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                ),
+                modifier = Modifier.clip(RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp))
             )
         }
     ) { paddingValues ->

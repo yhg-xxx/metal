@@ -33,6 +33,7 @@ import coil.compose.AsyncImage
 import com.example.model.Message
 import com.example.network.RetrofitClient
 import com.example.network.WebSocketManager
+import com.example.ui.theme.MentalTheme
 import com.example.util.DatabaseHelper
 import com.example.util.IpAddressManager
 import kotlinx.coroutines.Dispatchers
@@ -88,18 +89,20 @@ class ChatDetailActivity : ComponentActivity() {
         val userAvatar = loggedInUser?.avatarUrl
         
         setContent {
-            ChatDetailScreen(
-                initialMessages = emptyList(),
-                userAvatar = userAvatar,
-                counselorAvatar = counselorAvatar,
-                counselorName = counselorName,
-                userId = userId,
-                counselorId = counselorId,
-                isConnected = false, // 初始状态为未连接
-                onBackPress = { finish() },
-                errorMessage = null,
-                isLoadingHistory = false
-            )
+            MentalTheme {
+                ChatDetailScreen(
+                    initialMessages = emptyList(),
+                    userAvatar = userAvatar,
+                    counselorAvatar = counselorAvatar,
+                    counselorName = counselorName,
+                    userId = userId,
+                    counselorId = counselorId,
+                    isConnected = false, // 初始状态为未连接
+                    onBackPress = { finish() },
+                    errorMessage = null,
+                    isLoadingHistory = false
+                )
+            }
         }
     }
 }
@@ -337,6 +340,7 @@ fun ChatDetailScreen(
             .fillMaxSize()
             .padding(0.dp),
         topBar = {
+            // 使用与首页一致的TopAppBar实现
             TopAppBar(
                 title = {
                     Row(
@@ -358,7 +362,7 @@ fun ChatDetailScreen(
                             text = counselorName,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Medium,
-                            color = Color.Black
+                            color = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                 },
@@ -367,7 +371,7 @@ fun ChatDetailScreen(
                         Icon(
                             imageVector = Icons.Filled.ArrowBack,
                             contentDescription = "返回",
-                            tint = Color.Black
+                            tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                 },
@@ -376,11 +380,14 @@ fun ChatDetailScreen(
                         Icon(
                             imageVector = Icons.Filled.MoreVert,
                             contentDescription = "更多",
-                            tint = Color.Black
+                            tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                 },
-                modifier = Modifier.background(Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                ),
+                modifier = Modifier.clip(RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp))
             )
         },
         content = { paddingValues ->

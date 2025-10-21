@@ -24,9 +24,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,38 +50,43 @@ import com.example.ui.theme.MentalTheme
  * 学习屏幕组件
  * 包含个性化学习包推荐、视频学习等功能
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LearningScreen(modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxSize().background(Color(0xFFF7F7F7))) {
-        // 顶部标题栏
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .background(Color(0xFF5A67D8))
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "学习",
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "学习",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                },
+                actions = {
+                    IconButton(onClick = { /* 更多选项按钮点击事件 */ }) {
+                        Icon(
+                            imageVector = Icons.Filled.MoreVert,
+                            contentDescription = "更多选项",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                ),
+                modifier = Modifier.clip(RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp))
             )
-            IconButton(onClick = { /* 更多选项按钮点击事件 */ }) {
-                Icon(
-                    imageVector = Icons.Filled.MoreVert,
-                    contentDescription = "更多选项",
-                    tint = Color.White
-                )
-            }
         }
-        
-        // 主要内容区域
+    ) { paddingValues ->
         LazyColumn(
-            modifier = Modifier.weight(1f),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 80.dp)
+            modifier = modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                top = paddingValues.calculateTopPadding(),
+                bottom = 80.dp
+            )
         ) {
             // 推荐学习包
             item {
@@ -92,21 +102,21 @@ fun LearningScreen(modifier: Modifier = Modifier) {
             }
             
             // 学习包分类
-            item {
-                Spacer(modifier = Modifier.height(24.dp))
-                Text(
-                    text = "学习分类",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(16.dp)
-                )
-                LazyRow(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    val categories = listOf("全部", "情绪调节", "人际沟通", "职场心理", "亲子教育", "压力管理")
-                    items(categories.size) {
-                        LearningCategoryItem(categories[it])
+                item {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(
+                        text = "学习分类",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                    LazyRow(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        val categories = listOf("全部", "情绪调节", "人际沟通", "职场心理", "亲子教育", "压力管理")
+                        items(categories.size) {
+                            LearningCategoryItem(categories[it])
+                        }
                     }
                 }
-            }
             
             // 热门学习包
             item {

@@ -1,12 +1,12 @@
 [versions]
 agp = "8.9.0"
 kotlin = "2.0.21"
-coreKtx = "1.10.1"
+coreKtx = "1.13.1"
 junit = "4.13.2"
 junitVersion = "1.1.5"
 espressoCore = "3.5.1"
-lifecycleRuntimeKtx = "2.6.1"
-activityCompose = "1.8.0"
+lifecycleRuntimeKtx = "2.8.3"
+activityCompose = "1.8.2"
 composeBom = "2024.09.00"
 composeMaterialIconsExtended = "1.7.4"
 retrofit = "2.9.0"
@@ -19,7 +19,7 @@ appcompat = "1.7.1"
 recyclerview = "1.3.2"
 media3Effect = "1.8.0"
 cameraCore = "1.5.1"
-webstomp-client = "1.0.0"
+
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -50,7 +50,7 @@ androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version
 androidx-recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
 androidx-media3-effect = { group = "androidx.media3", name = "media3-effect", version.ref = "media3Effect" }
 androidx-camera-core = { group = "androidx.camera", name = "camera-core", version.ref = "cameraCore" }
-webstomp-client = { group = "nl.martijndwars", name = "webstomp-client", version.ref = "webstomp-client" }
+
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

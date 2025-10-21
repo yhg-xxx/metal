@@ -2,12 +2,6 @@ package com.example.ui.screens
 
 import android.content.Context
 import android.content.Intent
-import com.example.model.Counselor
-import com.example.network.RetrofitClient
-import com.example.ui.features.IconDisplayActivity
-import com.example.ui.features.ChatDetailActivity
-import com.example.util.DatabaseHelper
-import com.example.util.IpAddressManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,13 +17,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,8 +46,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-
+import com.example.model.Counselor
+import com.example.network.RetrofitClient
+import com.example.ui.features.ChatDetailActivity
+import com.example.ui.features.IconDisplayActivity
 import com.example.ui.theme.MentalTheme
+import com.example.util.DatabaseHelper
+import com.example.util.IpAddressManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -56,6 +61,7 @@ import timber.log.Timber
  * 消息屏幕组件
  * 包含消息列表和会话详情的基本UI结构
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessageScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
@@ -91,79 +97,84 @@ fun MessageScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    Column(modifier = modifier.fillMaxSize().background(Color(0xFFF7F7F7))) {
-        // 顶部标题栏
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .background(Color(0xFF5A67D8))
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "消息",
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "消息",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                },
+                actions = {
+                    IconButton(onClick = { /* 新增消息按钮点击事件 */ }) {
+                        Icon(
+                            imageVector = Icons.Filled.AddCircle,
+                            contentDescription = "新增消息",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                    IconButton(onClick = { 
+                        // 跳转到图标展示页面
+                        navigateToIconDisplay(context)
+                    }) {
+                        Icon(
+                            imageVector = Icons.Filled.MoreVert,
+                            contentDescription = "查看图标",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                ),
+                modifier = Modifier.clip(RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp))
             )
-            Row {
-                IconButton(onClick = { /* 新增消息按钮点击事件 */ }) {
-                    Icon(
-                        imageVector = Icons.Filled.AddCircle,
-                        contentDescription = "新增消息",
-                        tint = Color.White
-                    )
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(top = paddingValues.calculateTopPadding())
+        ) {
+            // 加载状态
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
                 }
-                IconButton(onClick = { 
-                    // 跳转到图标展示页面
-                    navigateToIconDisplay(context)
-                }) {
-                    Icon(
-                        imageVector = Icons.Filled.MoreVert,
-                        contentDescription = "查看图标",
-                        tint = Color.White
-                    )
+            } 
+            // 错误状态
+            else if (error != null) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = error ?: "加载失败", color = Color.Red)
                 }
             }
-        }
-        
-        // 加载状态
-        if (isLoading) {
-            Box(
-                modifier = Modifier.weight(1f),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+            // 空状态
+            else if (counselors.isNullOrEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "暂无消息", color = Color.Gray)
+                }
             }
-        } 
-        // 错误状态
-        else if (error != null) {
-            Box(
-                modifier = Modifier.weight(1f),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = error ?: "加载失败", color = Color.Red)
-            }
-        }
-        // 空状态
-        else if (counselors.isNullOrEmpty()) {
-            Box(
-                modifier = Modifier.weight(1f),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = "暂无消息", color = Color.Gray)
-            }
-        }
-        // 消息列表
-        else {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 80.dp)
-            ) {
-                items(counselors!!) {
-                    MessageListItem(counselor = it)
+            // 消息列表
+            else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 80.dp)
+                ) {
+                    items(counselors!!) {
+                        MessageListItem(counselor = it)
+                    }
                 }
             }
         }

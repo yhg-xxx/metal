@@ -46,40 +46,40 @@
         <activity
             android:name=".ui.features.ProfileEditActivity"
             android:exported="false"
-            android:theme="@style/Theme.Mental.NoActionBar" />
+            android:theme="@style/Theme.Mental" />
         <activity
             android:name=".ui.features.CounselorSearchActivity"
             android:exported="false"
-            android:theme="@style/Theme.Mental.NoActionBar" />
+            android:theme="@style/Theme.Mental" />
         <activity
             android:name=".ui.features.QuickConsultationActivity"
             android:exported="false"
-            android:theme="@style/Theme.Mental.NoActionBar" />
+            android:theme="@style/Theme.Mental" />
         <activity
             android:name=".ui.features.IconDisplayActivity"
             android:exported="false"
-            android:theme="@style/Theme.Mental.NoActionBar" />
+            android:theme="@style/Theme.Mental" />
         <activity
             android:name=".ui.features.CounselorDetailActivity"
             android:exported="false"
-            android:theme="@style/Theme.Mental.NoActionBar" />
+            android:theme="@style/Theme.Mental" />
         <activity
             android:name=".ui.features.ChatDetailActivity"
             android:exported="false"
-            android:theme="@style/Theme.Mental.NoActionBar"
+            android:theme="@style/Theme.Mental"
             android:windowSoftInputMode="stateHidden|adjustResize" />
         <activity
             android:name=".ui.features.VideoPlayerActivity"
             android:exported="false"
-            android:theme="@style/Theme.Mental.NoActionBar" />
+            android:theme="@style/Theme.Mental" />
         <activity
             android:name=".ui.features.TestQuestionsActivity"
             android:exported="false"
-            android:theme="@style/Theme.Mental.NoActionBar" />
+            android:theme="@style/Theme.Mental" />
         <activity
             android:name=".ui.features.AssessmentReportActivity"
             android:exported="false"
-            android:theme="@style/Theme.Mental.NoActionBar" />
+            android:theme="@style/Theme.Mental" />
 
     </application>
 

@@ -1,7 +1,6 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,20 +18,22 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -40,9 +41,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import androidx.compose.material3.Button
 import androidx.compose.ui.platform.LocalContext
 import android.content.Intent
+import androidx.compose.foundation.background
 import com.example.ui.features.CounselorDetailActivity
 import com.example.ui.features.QuickConsultationActivity
 
@@ -50,23 +51,23 @@ import com.example.R
 import com.example.model.Counselor
 import com.example.util.CounselorUtils
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import com.example.model.SearchCounselorsRequest
 import com.example.network.RetrofitClient
 import com.example.ui.theme.MentalTheme
-import com.example.util.IpAddressManager
-
+import com.example.util.ImageLoadingUtils
 
 
 /**
  * 首页屏幕组件
  * 实现图片样式的主页，包含搜索栏、主要功能入口、推荐咨询师等内容
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(modifier: Modifier = Modifier, onNavigateToSearch: () -> Unit) {
+
+    
     val context = LocalContext.current
     
     // 导航到快速咨询页面
@@ -95,159 +96,159 @@ fun HomeScreen(modifier: Modifier = Modifier, onNavigateToSearch: () -> Unit) {
         }
     }
     
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color(0xFFF7F7F7)),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 80.dp)
-    ) {
-        // 顶部搜索栏
-        item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF5A67D8))
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                // 应用标题
-                Text(
-                    text = "央心心理",
-                    color = Color.White,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            
-            // 搜索框
-            Row(
-
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(40.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Color.White)
-                        .padding(horizontal = 16.dp)
-                        .clickable { onNavigateToSearch() },
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Filled.Search,
-                            contentDescription = "搜索",
-                            tint = Color.Gray,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "亲子教育",
-                            color = Color.Gray,
-                            fontSize = 14.sp
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                IconButton(
-                    onClick = { onNavigateToSearch() },
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(Color(0xFF5A67D8))
-
-                ) {
+    Scaffold(
+        topBar = {
+            // 使用Material3的TopAppBar组件
+            TopAppBar(
+                title = {
                     Text(
-                        text = "搜索",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
+                        text = "央 心 心 理",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
-                }
-            }
-        }
-        
-        // 平台保障
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                PlatformGuaranteeItem("平台护航")
-                PlatformGuaranteeItem("资质担保")
-                PlatformGuaranteeItem("不满意退款")
-                PlatformGuaranteeItem("隐私保障")
-            }
-        }
-        
-        // 主要功能入口
-        item {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                FeatureEntryItem("心理测评", R.drawable.mental)
-                FeatureEntryItem("快速咨询", R.drawable.mental2, onClick = navigateToQuickConsultation)
-            }
-        }
-
-        // 推荐咨询师
-        item {
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "推荐咨询师",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-            )
-            Text(
-                text = "查看全部 >",
-                fontSize = 14.sp,
-                color = Color.Gray,
-                modifier = Modifier
-                    .padding(horizontal = 16.dp)
-                    .clickable { onNavigateToSearch() }
-            )
-            }
-            
-            // 咨询师列表
-            Spacer(modifier = Modifier.height(12.dp))
-            if (isLoading) {
-                Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                    Text(text = "加载中...", modifier = Modifier.align(Alignment.Center))
-                }
-            } else if (error != null) {
-                Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                    Text(text = error!!, color = Color.Red, modifier = Modifier.align(Alignment.Center))
-                }
-            } else if (counselors != null && counselors!!.isNotEmpty()) {
-                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    counselors!!.forEachIndexed { index, counselor ->
-                        CounselorItem(counselor = counselor)
-                        if (index < counselors!!.size - 1) {
-                            Spacer(modifier = Modifier.height(16.dp))
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                ),
+                actions = {
+                    // 搜索框和搜索按钮整合到TopAppBar中
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 16.dp)
+                            .height(40.dp)
+                            .width(240.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .clickable { onNavigateToSearch() }
+                            .padding(horizontal = 12.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Filled.Search,
+                                contentDescription = "搜索",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "亲子教育",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 14.sp
+                            )
                         }
                     }
+                },
+                modifier = Modifier.clip(RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp))
+            )
+        }
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                top = paddingValues.calculateTopPadding(),
+                bottom = 80.dp
+            )
+        ) {
+            // 搜索功能已整合到TopAppBar中
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+            
+
+            
+            // 平台保障
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    PlatformGuaranteeItem("平台护航")
+                    PlatformGuaranteeItem("资质担保")
+                    PlatformGuaranteeItem("不满意退款")
+                    PlatformGuaranteeItem("隐私保障")
                 }
-            } else {
-                Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                    Text(text = "暂无咨询师数据", modifier = Modifier.align(Alignment.Center))
+            }
+            
+            // 主要功能入口
+            item {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    FeatureEntryItem("心理测评", R.drawable.mental)
+                    FeatureEntryItem("快速咨询", R.drawable.mental2, onClick = navigateToQuickConsultation)
+                }
+            }
+
+            // 推荐咨询师
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "推荐咨询师",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                    Text(
+                        text = "查看全部 >",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .clickable { onNavigateToSearch() }
+                    )
+                }
+                
+                // 咨询师列表
+                Spacer(modifier = Modifier.height(12.dp))
+                if (isLoading) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                        Text(
+                            text = "加载中...", 
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
+                } else if (error != null) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                        Text(
+                            text = error!!, 
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
+                } else if (counselors != null && counselors!!.isNotEmpty()) {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        counselors!!.forEachIndexed { index, counselor ->
+                            CounselorItem(counselor = counselor)
+                            if (index < counselors!!.size - 1) {
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+                        }
+                    }
+                } else {
+                    Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                        Text(
+                            text = "暂无咨询师数据", 
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
                 }
             }
         }
     }
-    
 
 }
 
@@ -259,7 +260,7 @@ private fun PlatformGuaranteeItem(text: String) {
     Text(
         text = text,
         fontSize = 12.sp,
-        color = Color.Gray,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.clickable {}
     )
 }
@@ -275,7 +276,7 @@ private fun FeatureEntryItem(text: String, imageRes: Int, onClick: (() -> Unit)?
         modifier = Modifier
             .fillMaxWidth()
             .height(88.dp)
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.surface)
             .clip(RoundedCornerShape(12.dp))
             .clickable { onClick?.invoke() },
         verticalAlignment = Alignment.CenterVertically
@@ -285,7 +286,7 @@ private fun FeatureEntryItem(text: String, imageRes: Int, onClick: (() -> Unit)?
             modifier = Modifier
                 .width(60.dp)
                 .height(60.dp)
-                .background(Color(0xFFE6F0FF))
+                .background(MaterialTheme.colorScheme.primaryContainer)
                 .clip(RoundedCornerShape(12.dp))
         ) {
             Image(
@@ -304,13 +305,13 @@ private fun FeatureEntryItem(text: String, imageRes: Int, onClick: (() -> Unit)?
                 text = text,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black
+                color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = subText,
                 fontSize = 12.sp,
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         
@@ -318,7 +319,7 @@ private fun FeatureEntryItem(text: String, imageRes: Int, onClick: (() -> Unit)?
         Icon(
             imageVector = Icons.Filled.ArrowForward,
             contentDescription = "进入",
-            tint = Color.Gray,
+            tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier
                 .size(16.dp)
                 .padding(16.dp)
@@ -326,70 +327,7 @@ private fun FeatureEntryItem(text: String, imageRes: Int, onClick: (() -> Unit)?
     }
 }
 
-/**
- * 测试图片加载功能组件
- */
-@Composable
-private fun TestImageLoading() {
-    val context = LocalContext.current
-    val imageUrl = "http://localhost:8080/files/download/1759307161163_efe5745b4caadb89fd5eade8cb165bc.jpg"
-    val processedImageUrl = IpAddressManager.processImageUrl(imageUrl)
-    var loadResult by remember { mutableStateOf<String?>(null) }
-    val coroutineScope = rememberCoroutineScope()
-    
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Button(onClick = {
-            Timber.d("开始测试图片加载: 原始URL=$imageUrl, 处理后URL=$processedImageUrl")
-            
-            coroutineScope.launch {
-                try {
-                    // 标记测试已启动
-                    loadResult = "测试已启动，请查看日志..."
-                    
-                    // 这里不直接调用Composable函数，而是通过状态更新来触发UI变化
-                    // 实际的图片加载将由下面的AsyncImage组件处理
-                    
-                    // 模拟网络请求延迟
-                    withContext(Dispatchers.IO) {
-                        delay(500)
-                    }
-                    
-                } catch (e: Exception) {
-                    loadResult = "图片加载异常: ${e.message ?: "未知异常"}"
-                    Timber.e(e, "图片加载异常")
-                }
-            }
-        }) {
-            Text("测试图片加载")
-        }
-        
-        if (loadResult != null) {
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(text = loadResult ?: "", fontSize = 14.sp, color = if (loadResult?.contains("成功") == true) Color.Green else Color.Red)
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        AsyncImage(
-            model = processedImageUrl,
-            contentDescription = "测试图片",
-            modifier = Modifier.size(200.dp),
-            placeholder = painterResource(id = R.drawable.img),
-            error = painterResource(id = R.drawable.img),
-            contentScale = ContentScale.Crop,
-            onSuccess = { 
-                loadResult = "图片加载成功!"
-                Timber.d("图片加载成功")
-            },
-            onError = { 
-                loadResult = "图片加载失败"
-                Timber.e("图片加载失败")
-            }
-        )
-    }
-}
+// 测试图片加载功能已抽取到ImageLoadingUtils中
 
 
 
@@ -402,7 +340,7 @@ private fun CounselorItem(counselor: Counselor) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.surface)
             .clip(RoundedCornerShape(10.dp))
             .padding(12.dp)
             .clickable {
@@ -414,7 +352,7 @@ private fun CounselorItem(counselor: Counselor) {
     ) {
         // 咨询师头像
         // 处理和记录图片URL
-        val imageUrl = IpAddressManager.processImageUrl(counselor.photoUrl)
+        val imageUrl = ImageLoadingUtils.processImageUrl(counselor.photoUrl)
         Timber.d("加载咨询师头像: name=${counselor.realName}, originalUrl=${counselor.photoUrl}, processedUrl=$imageUrl")
         
         Box(
@@ -447,20 +385,21 @@ private fun CounselorItem(counselor: Counselor) {
                 text = CounselorUtils.parseSpecialization(counselor.specialization),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = CounselorUtils.getQualificationLabel(counselor),
                 fontSize = 12.sp,
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "${counselor.realName} 从业${counselor.yearsOfExperience}年 · 咨询人数${counselor.totalSessions}人",
                 fontSize = 12.sp,
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1
             )
             Spacer(modifier = Modifier.height(4.dp))
@@ -468,13 +407,13 @@ private fun CounselorItem(counselor: Counselor) {
                 Text(
                     text = CounselorUtils.getServiceLabels(counselor),
                     fontSize = 12.sp,
-                    color = Color(0xFF5A67D8)
+                    color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "¥${counselor.consultationFee}起",
                     fontSize = 12.sp,
-                    color = Color.Red
+                    color = MaterialTheme.colorScheme.error
                 )
             }
         }
@@ -483,14 +422,14 @@ private fun CounselorItem(counselor: Counselor) {
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .background(Color(0xFF5A67D8))
+                .background(MaterialTheme.colorScheme.primary)
                 .clip(RoundedCornerShape(5.dp))
                 .clickable {},
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "私聊",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onPrimary,
                 fontSize = 12.sp
             )
         }

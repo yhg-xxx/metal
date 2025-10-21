@@ -17,6 +17,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -277,14 +278,21 @@ fun ProfileEditScreen(
             .fillMaxSize()
             .statusBarsPadding(), // 添加状态栏内边距
         topBar = {
-            // 简化 TopAppBar - 让系统自动处理状态栏间距
+            // 使用与首页一致的TopAppBar实现
             TopAppBar(
-                title = { Text(text = "编辑个人资料") },
+                title = {
+                    Text(
+                        text = "编辑个人资料",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.Filled.ArrowBack,
-                            contentDescription = "返回"
+                            contentDescription = "返回",
+                            tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                 },
@@ -293,12 +301,13 @@ fun ProfileEditScreen(
                         onClick = ::saveUserInfo,
                         enabled = !isSaving
                     ) {
-                        Text(text = "保存", color = Color(0xFF5A67D8))
+                        Text(text = "保存", color = MaterialTheme.colorScheme.onPrimary)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
-                )
+                    containerColor = MaterialTheme.colorScheme.primary
+                ),
+                modifier = Modifier.clip(RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp))
             )
         }
     ) { paddingValues ->

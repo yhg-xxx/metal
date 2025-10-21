@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Person
 
 import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -72,7 +73,7 @@ enum class BottomNavigationItem(
     val icon: ImageVector
 ) {
     HOME("首页", Icons.Filled.Home),
-    MESSAGE("消息", Icons.Filled.Call),
+    MESSAGE("消息", Icons.Filled.ChatBubble),
     LEARNING("学习", Icons.Filled.Book),
     PROFILE("我的", Icons.Filled.Person)
 }

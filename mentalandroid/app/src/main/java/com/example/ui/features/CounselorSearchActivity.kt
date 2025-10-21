@@ -1,9 +1,11 @@
 package com.example.ui.features
 
+import android.annotation.SuppressLint
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,9 +13,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,10 +42,23 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import android.content.Intent
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowCompat
 
-class CounselorSearchActivity : ComponentActivity() {
+
+@SuppressLint("RestrictedApi")
+class CounselorSearchActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // 启用边缘到边缘显示
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        // 设置沉浸式状态栏
+        setupImmersiveStatusBar()
+        
+
+        
         setContent {
             MentalTheme {
                 CounselorSearchScreen(
@@ -51,15 +68,24 @@ class CounselorSearchActivity : ComponentActivity() {
             }
         }
     }
+    private fun setupImmersiveStatusBar() {
+        // 让布局可以全屏，延展到状态栏里
+        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars =
+            false
+
+        // 设置状态栏颜色为透明
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+    }
 }
 
 /**
  * 咨询师搜索页面
  * 提供关键词搜索和多维度筛选功能
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CounselorSearchScreen(
-    context: ComponentActivity,
+    context: AppCompatActivity,
     onBackClick: () -> Unit
 ) {
     // 状态变量
@@ -88,12 +114,17 @@ fun CounselorSearchScreen(
     
     // 加载筛选选项
     fun loadFilterOptions() {
-        coroutineScope.launch {
+        coroutineScope.launch(Dispatchers.Main) {
             try {
-                withContext(Dispatchers.IO) {
-                    allSpecializations = RetrofitClient.apiService.getAllSpecializations()
-                    allApproaches = RetrofitClient.apiService.getAllTherapeuticApproaches()
+                val specializations = withContext(Dispatchers.IO) {
+                    RetrofitClient.apiService.getAllSpecializations()
                 }
+                val approaches = withContext(Dispatchers.IO) {
+                    RetrofitClient.apiService.getAllTherapeuticApproaches()
+                }
+                // 在主线程更新状态
+                allSpecializations = specializations
+                allApproaches = approaches
             } catch (e: Exception) {
                 error = "获取筛选选项失败: ${e.message}"
                 Timber.e(e, "Failed to fetch filter options")
@@ -103,19 +134,21 @@ fun CounselorSearchScreen(
     
     // 搜索咨询师
     fun searchCounselors() {
-        coroutineScope.launch {
+        coroutineScope.launch(Dispatchers.Main) {
             isLoading = true
             try {
-                withContext(Dispatchers.IO) {
-                    val request = SearchCounselorsRequest(
-                        keyword = if (keyword.isEmpty()) null else keyword,
-                        specializationTags = if (specializationTags.isEmpty()) null else specializationTags,
-                        therapeuticApproachTags = if (therapeuticApproachTags.isEmpty()) null else therapeuticApproachTags,
-                        serviceTypeTags = if (serviceTypeTags.isEmpty()) null else serviceTypeTags,
-                        genderFilter = if (genderFilter == "ALL") null else genderFilter
-                    )
-                    counselors = RetrofitClient.apiService.searchCounselors(request)
+                val request = SearchCounselorsRequest(
+                    keyword = if (keyword.isEmpty()) null else keyword,
+                    specializationTags = if (specializationTags.isEmpty()) null else specializationTags,
+                    therapeuticApproachTags = if (therapeuticApproachTags.isEmpty()) null else therapeuticApproachTags,
+                    serviceTypeTags = if (serviceTypeTags.isEmpty()) null else serviceTypeTags,
+                    genderFilter = if (genderFilter == "ALL") null else genderFilter
+                )
+                val result = withContext(Dispatchers.IO) {
+                    RetrofitClient.apiService.searchCounselors(request)
                 }
+                // 在主线程更新状态
+                counselors = result
             } catch (e: Exception) {
                 error = "搜索咨询师失败: ${e.message}"
                 Timber.e(e, "Failed to search counselors")
@@ -127,8 +160,37 @@ fun CounselorSearchScreen(
     
     // 获取筛选选项和初始咨询师列表
     LaunchedEffect(Unit) {
-        loadFilterOptions()
-        searchCounselors()
+        // 在LaunchedEffect内部直接执行异步操作
+        try {
+            // 加载筛选选项
+            val specializations = withContext(Dispatchers.IO) {
+                RetrofitClient.apiService.getAllSpecializations()
+            }
+            val approaches = withContext(Dispatchers.IO) {
+                RetrofitClient.apiService.getAllTherapeuticApproaches()
+            }
+            allSpecializations = specializations
+            allApproaches = approaches
+            
+            // 搜索咨询师
+            isLoading = true
+            val request = SearchCounselorsRequest(
+                keyword = if (keyword.isEmpty()) null else keyword,
+                specializationTags = if (specializationTags.isEmpty()) null else specializationTags,
+                therapeuticApproachTags = if (therapeuticApproachTags.isEmpty()) null else therapeuticApproachTags,
+                serviceTypeTags = if (serviceTypeTags.isEmpty()) null else serviceTypeTags,
+                genderFilter = if (genderFilter == "ALL") null else genderFilter
+            )
+            val result = withContext(Dispatchers.IO) {
+                RetrofitClient.apiService.searchCounselors(request)
+            }
+            counselors = result
+        } catch (e: Exception) {
+            error = "加载失败: ${e.message}"
+            Timber.e(e, "Failed to load initial data")
+        } finally {
+            isLoading = false
+        }
     }
     
     // 清除所有筛选条件
@@ -238,7 +300,7 @@ fun CounselorSearchScreen(
     
     // 渲染咨询师项
     @Composable
-    fun CounselorItem(counselor: Counselor, context: ComponentActivity) {
+    fun CounselorItem(counselor: Counselor, context: AppCompatActivity) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -329,44 +391,42 @@ fun CounselorSearchScreen(
             }
         }
     }
-    
+
     // 主UI布局
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
         topBar = {
-            // 顶部搜索栏
-            Column {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFF5A67D8))
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    // 返回按钮靠左
+            // 使用与首页一致的TopAppBar实现
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "咨询师搜索",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                },
+                navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
-                            imageVector = Icons.Filled.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "返回",
-                            tint = Color.White,
+                            tint = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.size(24.dp)
                         )
                     }
-                    
-                    // 标题居中
-                    Text(
-                        text = "咨询师搜索",
-                        color = Color.White,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
+                },
+                actions = {
                     // 右侧占位元素，保持标题居中
                     Spacer(modifier = Modifier.width(80.dp))
-                }
-
-                // 搜索框部分为：
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                ),
+                modifier = Modifier.clip(RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp))
+            )
+        },
+    ) { paddingValues ->
+            Column(modifier = Modifier.padding(paddingValues)) {
+                // 搜索框部分
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -377,8 +437,8 @@ fun CounselorSearchScreen(
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .height(54.dp) // 增加高度到54dp
-                            .background(Color.White, RoundedCornerShape(24.dp)) // 圆角也相应调整
+                            .height(54.dp)
+                            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(24.dp))
                     ) {
                         Row(
                             modifier = Modifier
@@ -390,7 +450,7 @@ fun CounselorSearchScreen(
                                 imageVector = Icons.Filled.Search,
                                 contentDescription = "搜索",
                                 tint = Color.Gray,
-                                modifier = Modifier.size(25.dp) // 稍微增大图标
+                                modifier = Modifier.size(25.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             TextField(
@@ -400,17 +460,17 @@ fun CounselorSearchScreen(
                                 },
                                 modifier = Modifier
                                     .weight(1f)
-                                    .fillMaxHeight(), // 使用fillMaxHeight填满可用高度
+                                    .fillMaxHeight(),
                                 placeholder = {
                                     Text(
                                         text = "搜索咨询师姓名、擅长领域...",
                                         color = Color.Gray,
-                                        fontSize = 14.sp, // 增大占位符字体
+                                        fontSize = 14.sp,
                                         maxLines = 1
                                     )
                                 },
                                 textStyle = TextStyle(
-                                    fontSize = 16.sp, // 增大输入文字字体
+                                    fontSize = 16.sp,
                                     color = Color.Black
                                 ),
                                 singleLine = true,
@@ -426,14 +486,14 @@ fun CounselorSearchScreen(
                             )
                         }
                     }
-
+                    
                     Spacer(modifier = Modifier.width(12.dp))
-
-                    // 搜索按钮 - 也相应增大
+                    
+                    // 搜索按钮
                     Box(
                         modifier = Modifier
-                            .size(48.dp) // 增大到48dp
-                            .clip(RoundedCornerShape(24.dp)) // 圆角相应调整
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(24.dp))
                             .background(Color(0xFF5A67D8))
                             .clickable { searchCounselors() },
                         contentAlignment = Alignment.Center
@@ -441,34 +501,32 @@ fun CounselorSearchScreen(
                         Text(
                             text = "搜索",
                             color = Color.White,
-                            fontSize = 16.sp, // 增大按钮文字
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
-            }
-        },
-        content = {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFFF7F7F7))
-                    .padding(it),
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
-                // 筛选条件区域
-                item {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        // 当前筛选条件
-                        if (specializationTags.isNotEmpty() || therapeuticApproachTags.isNotEmpty() || 
-                            serviceTypeTags.isNotEmpty() || genderFilter != "ALL") {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(text = "当前筛选条件", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                Text(
+                
+                // 咨询师列表部分
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFFF7F7F7)),
+                    contentPadding = PaddingValues(bottom = 80.dp)
+                ) {
+                    // 筛选条件区域
+                    item {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            // 当前筛选条件
+                            if (specializationTags.isNotEmpty() || therapeuticApproachTags.isNotEmpty() || 
+                                serviceTypeTags.isNotEmpty() || genderFilter != "ALL") {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(text = "当前筛选条件", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                    Text(
                                     text = "清除全部",
                                     color = Color(0xFF5A67D8),
                                     fontSize = 12.sp,
@@ -492,135 +550,141 @@ fun CounselorSearchScreen(
                                     Tag(text = tag, isSelected = true) {
                                         toggleTag(tag, serviceTypeTags) { serviceTypeTags = it }
                                     }
-                                }
-                                if (genderFilter != "ALL") {
-                                    val genderText = genderOptions.find { genderMap[it] == genderFilter } ?: ""
-                                    Tag(text = genderText, isSelected = true) {
-                                        genderFilter = "ALL"
-                                        searchCounselors()
+                                                    }
+                                                    if (genderFilter != "ALL") {
+                                                        val genderText = genderOptions.find { genderMap[it] == genderFilter } ?: ""
+                                                        Tag(text = genderText, isSelected = true) {
+                                                            genderFilter = "ALL"
+                                                            searchCounselors()
+                                                        }
+                                                    }
+                                                }
+                                                Spacer(modifier = Modifier.height(16.dp))
+                                            }
+                                            
+                                            // 筛选选项
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                // 擅长领域筛选
+                                                Box(
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .height(40.dp)
+                                                        .background(Color.White)
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .padding(horizontal = 12.dp)
+                                                        .clickable { showSpecializationFilter = true },
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(text = "擅长领域", fontSize = 14.sp)
+                                                }
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                
+                                                // 治疗流派筛选
+                                                Box(
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .height(40.dp)
+                                                        .background(Color.White)
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .padding(horizontal = 12.dp)
+                                                        .clickable { showApproachFilter = true },
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(text = "治疗流派", fontSize = 14.sp)
+                                                }
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                
+                                                // 咨询方式筛选
+                                                Box(
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .height(40.dp)
+                                                        .background(Color.White)
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .padding(horizontal = 12.dp)
+                                                        .clickable { showServiceTypeFilter = true },
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(text = "咨询方式", fontSize = 14.sp)
+                                                }
+                                            }
+                                            
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            
+                                            // 性别筛选
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .height(40.dp)
+                                                        .background(Color.White)
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .padding(horizontal = 12.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(text = "性别", fontSize = 14.sp)
+                                                }
+                                                
+                                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                                    genderOptions.forEach { option ->
+                                                        Tag(
+                                                            text = option,
+                                                            isSelected = genderMap[option] == genderFilter
+                                                        ) {
+                                                            genderFilter = genderMap[option] ?: "ALL"
+                                                            searchCounselors()
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    // 咨询师列表
+                                    if (isLoading) {
+                                        item {
+                                            Box(modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp)) {
+                                                Text(text = "加载中...", modifier = Modifier.align(Alignment.Center))
+                                            }
+                                        }
+                                    } else if (error != null) {
+                                        item {
+                                            Box(modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp)) {
+                                                Text(text = error!!, color = Color.Red, modifier = Modifier.align(Alignment.Center))
+                                            }
+                                        }
+                                    } else if (counselors != null && counselors!!.isNotEmpty()) {
+                                        items(counselors!!) { counselor ->
+                                            CounselorItem(counselor = counselor, context = context)
+                                            Spacer(modifier = Modifier.height(16.dp))
+                                        }
+                                    } else {
+                                        item {
+                                            Box(modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp)) {
+                                                Text(text = "暂无符合条件的咨询师", modifier = Modifier.align(Alignment.Center))
+                                            }
+                                        }
+                                    }
+                                    
+                                    // 底部间距
+                                    item {
+                                        Spacer(modifier = Modifier.height(80.dp))
                                     }
                                 }
                             }
-                            Spacer(modifier = Modifier.height(16.dp))
                         }
-                        
-                        // 筛选选项
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            // 擅长领域筛选
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(40.dp)
-                                    .background(Color.White)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 12.dp)
-                                    .clickable { showSpecializationFilter = true },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(text = "擅长领域", fontSize = 14.sp)
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            
-                            // 治疗流派筛选
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(40.dp)
-                                    .background(Color.White)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 12.dp)
-                                    .clickable { showApproachFilter = true },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(text = "治疗流派", fontSize = 14.sp)
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            
-                            // 咨询方式筛选
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(40.dp)
-                                    .background(Color.White)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 12.dp)
-                                    .clickable { showServiceTypeFilter = true },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(text = "咨询方式", fontSize = 14.sp)
-                            }
-                        }
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        // 性别筛选
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .height(40.dp)
-                                    .background(Color.White)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 12.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(text = "性别", fontSize = 14.sp)
-                            }
-                            
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                                genderOptions.forEach { option ->
-                                    Tag(
-                                        text = option,
-                                        isSelected = genderMap[option] == genderFilter
-                                    ) {
-                                        genderFilter = genderMap[option] ?: "ALL"
-                                        searchCounselors()
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // 咨询师列表
-                item {
-                    if (isLoading) {
-                        Box(modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)) {
-                            Text(text = "加载中...", modifier = Modifier.align(Alignment.Center))
-                        }
-                    } else if (error != null) {
-                        Box(modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)) {
-                            Text(text = error!!, color = Color.Red, modifier = Modifier.align(Alignment.Center))
-                        }
-                    } else if (counselors != null && counselors!!.isNotEmpty()) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                              counselors!!.forEachIndexed { index, counselor ->
-                                  CounselorItem(counselor = counselor, context = context)
-                                  if (index < counselors!!.size - 1) {
-                                      Spacer(modifier = Modifier.height(16.dp))
-                                  }
-                              }
-                          }
-                    } else {
-                        Box(modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)) {
-                            Text(text = "暂无符合条件的咨询师", modifier = Modifier.align(Alignment.Center))
-                        }
-                    }
-                }
-            }
-        }
-    )
+
     
     // 筛选弹窗
     if (showSpecializationFilter) {
