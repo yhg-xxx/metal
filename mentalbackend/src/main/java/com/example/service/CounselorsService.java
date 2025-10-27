@@ -1,4 +1,4 @@
- package com.example.service;
+package com.example.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.dto.CounselorDTO;
@@ -14,6 +14,9 @@ public interface CounselorsService extends IService<Counselors> {
     
     // 获取咨询师详情（包含用户信息和服务设置）
     CounselorDTO getCounselorDetail(Long counselorId);
+    
+    // 根据用户ID获取咨询师详情
+    CounselorDTO getCounselorDetailByUserId(Long userId);
     
     // 保存或更新咨询师信息
     boolean saveOrUpdateCounselor(CounselorDTO counselorDTO);

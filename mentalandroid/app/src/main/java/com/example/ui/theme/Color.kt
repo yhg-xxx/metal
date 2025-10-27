@@ -11,3 +11,6 @@ val Pink80 = Color(0xFFE1F5FE)  // 浅蓝白
 val Purple40 = Color(0xFFADE4FF)  // 深蓝
 val PurpleGrey40 = Color(0xFF42A5F5)  // 中蓝
 val Pink40 = Color(0xFFE3F2FD)  // 浅蓝白
+
+// 新增主题颜色 - 用于按钮等交互元素
+val ButtonBlue = Color(0xFF47A1F5)  // rgb(71,161,245)

@@ -2,7 +2,9 @@ package com.example.ui.features
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -16,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.VideoCall
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.DisposableEffect
@@ -29,7 +32,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import android.Manifest
 import coil.compose.AsyncImage
+import java.util.UUID
 import com.example.model.Message
 import com.example.network.RetrofitClient
 import com.example.network.WebSocketManager
@@ -70,6 +77,91 @@ class ChatDetailActivity : ComponentActivity() {
                 }
             }
             context.startActivity(intent)
+        }
+    }
+    
+    // 权限相关
+    private val requiredPermissions = arrayOf(
+        Manifest.permission.CAMERA,
+        Manifest.permission.RECORD_AUDIO
+    )
+    private val PERMISSION_REQUEST_CODE = 1001
+    
+    private fun hasRequiredPermissions(): Boolean {
+        return requiredPermissions.all {
+            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+    
+    private fun requestPermissionsIfNeeded(onPermissionsGranted: () -> Unit) {
+        val missingPermissions = requiredPermissions.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+        
+        if (missingPermissions.isNotEmpty()) {
+            ActivityCompat.requestPermissions(
+                this,
+                missingPermissions.toTypedArray(),
+                PERMISSION_REQUEST_CODE
+            )
+        } else {
+            onPermissionsGranted()
+        }
+    }
+    
+    // 用于生成通话ID的辅助方法
+    private fun generateCallId(): String {
+        return UUID.randomUUID().toString()
+    }
+    
+    // 创建用于处理视频通话的函数
+    fun startVideoCall(userId: Long, counselorId: Int, counselorName: String?, counselorAvatar: String?) {
+        // 先检查权限
+        requestPermissionsIfNeeded {
+            val callId = generateCallId()
+            val intent = Intent(this, VideoCallActivity::class.java).apply {
+                putExtra(VideoCallActivity.EXTRA_USER_ID, userId)
+                putExtra(VideoCallActivity.EXTRA_COUNSELOR_ID, counselorId)
+                putExtra(VideoCallActivity.EXTRA_CALL_ID, callId)
+                putExtra(VideoCallActivity.EXTRA_INCOMING_CALL, false)
+                putExtra(VideoCallActivity.EXTRA_CALLER_NAME, counselorName)
+                putExtra(VideoCallActivity.EXTRA_CALLER_AVATAR, counselorAvatar)
+            }
+            startActivity(intent)
+
+            // 发送视频通话请求到服务器
+            try {
+                WebSocketManager.getInstance().sendWebRTCStatus(
+                    senderId = userId,
+                    receiverId = counselorId,
+                    senderType = "user",
+                    status = "request",
+                    callId = callId
+                )
+            } catch (e: Exception) {
+                Toast.makeText(this, "发送视频通话请求失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        
+        when (requestCode) {
+            PERMISSION_REQUEST_CODE -> {
+                val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+                if (!allGranted) {
+                    Toast.makeText(
+                        this,
+                        "无法获取相机或麦克风权限，视频通话功能可能无法正常使用",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
         }
     }
     
@@ -145,6 +237,25 @@ fun ChatDetailScreen(
             } catch (e: Exception) {
                 // 忽略断开连接时的异常
             }
+        }
+    }
+    
+    // 开始视频通话
+    fun startVideoCall() {
+        if (loggedInUserId > 0 && counselorId > 0 && connectedState.value) {
+            try {
+                val activity = context as? ChatDetailActivity
+                activity?.startVideoCall(
+                    userId = loggedInUserId,
+                    counselorId = counselorId,
+                    counselorName = counselorName,
+                    counselorAvatar = counselorAvatar
+                )
+            } catch (e: Exception) {
+                errorState.value = "发起视频通话失败：${e.message}"
+            }
+        } else if (!connectedState.value) {
+            errorState.value = "网络未连接，请检查网络设置"
         }
     }
     
@@ -335,6 +446,90 @@ fun ChatDetailScreen(
         }
     }
     
+    // 消息行组件
+    @Composable
+    fun MessageRow(
+        message: Message,
+        counselorAvatar: String?,
+        userAvatar: String?
+    ) {
+        val isUser = message.senderType == "USER"
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
+            verticalAlignment = Alignment.Top
+        ) {
+            if (!isUser) {
+                if (counselorAvatar != null) {
+                    val processedAvatarUrl = IpAddressManager.processImageUrl(counselorAvatar)
+                    AsyncImage(
+                        model = processedAvatarUrl,
+                        contentDescription = "咨询师头像",
+                        modifier = Modifier
+                            .width(36.dp)
+                            .height(36.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+            }
+            
+            Column {
+                Box(
+                    modifier = Modifier
+                        .background(
+                            color = if (isUser) Color(0xFF5A67D8) else Color.White,
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .padding(12.dp)
+                ) {
+                    Text(
+                        text = message.content,
+                        color = if (isUser) Color.White else Color.Black,
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp
+                    )
+                }
+                
+                if (message.sentTime.isNotEmpty()) {
+                    Text(
+                        text = formatTimestamp(message.sentTime),
+                        color = Color.Gray,
+                        fontSize = 12.sp,
+                        modifier = Modifier
+                            .padding(top = 4.dp)
+                            .align(if (isUser) Alignment.End else Alignment.Start)
+                    )
+                }
+            }
+            
+            if (isUser) {
+                Spacer(modifier = Modifier.width(8.dp))
+                // 使用本地数据库中已登录用户的头像
+                if (userAvatar != null) {
+                    val processedUserAvatarUrl = IpAddressManager.processImageUrl(userAvatar)
+                    AsyncImage(
+                        model = processedUserAvatarUrl,
+                        contentDescription = "用户头像",
+                        modifier = Modifier
+                            .width(36.dp)
+                            .height(36.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .width(36.dp)
+                            .height(36.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(Color(0xFFE0E0E0))
+                    )
+                }
+            }
+        }
+    }
+    
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -376,10 +571,17 @@ fun ChatDetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* 更多操作 */ }) {
+                    IconButton(onClick = { startVideoCall() }) {
                         Icon(
-                            imageVector = Icons.Filled.MoreVert,
-                            contentDescription = "更多",
+                            imageVector = Icons.Filled.VideoCall,
+                            contentDescription = "视频通话",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                        IconButton(onClick = { /* 更多操作 */ }) {
+                            Icon(
+                                imageVector = Icons.Filled.MoreVert,
+                                contentDescription = "更多",
                             tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }
@@ -451,81 +653,7 @@ fun ChatDetailScreen(
                         }
                     } else {
                         items(messages.value) { message ->
-                            val isUser = message.senderType == "USER"
-                            
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
-                                verticalAlignment = Alignment.Top
-                            ) {
-                                if (!isUser) {
-                                    if (counselorAvatar != null) {
-                                        val processedAvatarUrl = IpAddressManager.processImageUrl(counselorAvatar)
-                                        AsyncImage(
-                                            model = processedAvatarUrl,
-                                            contentDescription = "咨询师头像",
-                                            modifier = Modifier
-                                                .width(36.dp)
-                                                .height(36.dp)
-                                                .clip(RoundedCornerShape(18.dp))
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                    }
-                                }
-                                
-                                Column {
-                                    Box(
-                                        modifier = Modifier
-                                            .background(
-                                                color = if (isUser) Color(0xFF5A67D8) else Color.White,
-                                                shape = RoundedCornerShape(16.dp)
-                                            )
-                                            .padding(12.dp)
-                                    ) {
-                                        Text(
-                                            text = message.content,
-                                            color = if (isUser) Color.White else Color.Black,
-                                            fontSize = 14.sp,
-                                            lineHeight = 20.sp
-                                        )
-                                    }
-                                    
-                                    if (message.sentTime.isNotEmpty()) {
-                                        Text(
-                                            text = formatTimestamp(message.sentTime),
-                                            color = Color.Gray,
-                                            fontSize = 12.sp,
-                                            modifier = Modifier
-                                                .padding(top = 4.dp)
-                                                .align(if (isUser) Alignment.End else Alignment.Start)
-                                        )
-                                    }
-                                }
-                                
-                                if (isUser) {
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    // 使用本地数据库中已登录用户的头像
-                                    if (loggedInUserAvatar != null) {
-                                        val processedUserAvatarUrl = IpAddressManager.processImageUrl(loggedInUserAvatar)
-                                        AsyncImage(
-                                            model = processedUserAvatarUrl,
-                                            contentDescription = "用户头像",
-                                            modifier = Modifier
-                                                .width(36.dp)
-                                                .height(36.dp)
-                                                .clip(RoundedCornerShape(18.dp))
-                                        )
-                                    } else {
-                                        Box(
-                                            modifier = Modifier
-                                                .width(36.dp)
-                                                .height(36.dp)
-                                                .clip(RoundedCornerShape(18.dp))
-                                                .background(Color(0xFFE0E0E0))
-                                        )
-                                    }
-                                }
-                            }
+                            MessageRow(message, counselorAvatar, loggedInUserAvatar)
                             Spacer(modifier = Modifier.height(12.dp))
                         }
                     }
@@ -572,11 +700,12 @@ fun ChatDetailScreen(
                         Icon(
                             imageVector = Icons.Filled.Send,
                             contentDescription = "发送",
-                            tint = if (messageText.value.isNotBlank() && isConnected) Color(0xFF5A67D8) else Color.Gray
+                            tint = if (messageText.value.isNotBlank() && connectedState.value) Color(0xFF5A67D8) else Color.Gray
                         )
                     }
                 }
             }
         }
     )
+
 }

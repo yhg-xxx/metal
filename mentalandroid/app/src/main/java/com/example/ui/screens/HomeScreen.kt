@@ -22,6 +22,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -233,7 +234,11 @@ fun HomeScreen(modifier: Modifier = Modifier, onNavigateToSearch: () -> Unit) {
                         counselors!!.forEachIndexed { index, counselor ->
                             CounselorItem(counselor = counselor)
                             if (index < counselors!!.size - 1) {
-                                Spacer(modifier = Modifier.height(16.dp))
+                                Divider(
+                                    modifier = Modifier.padding(vertical = 16.dp),
+                                    thickness = 1.dp,
+                                    color = MaterialTheme.colorScheme.outlineVariant
+                                )
                             }
                         }
                     }
@@ -276,8 +281,9 @@ private fun FeatureEntryItem(text: String, imageRes: Int, onClick: (() -> Unit)?
         modifier = Modifier
             .fillMaxWidth()
             .height(88.dp)
-            .background(MaterialTheme.colorScheme.surface)
             .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surface)
+
             .clickable { onClick?.invoke() },
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -286,8 +292,9 @@ private fun FeatureEntryItem(text: String, imageRes: Int, onClick: (() -> Unit)?
             modifier = Modifier
                 .width(60.dp)
                 .height(60.dp)
-                .background(MaterialTheme.colorScheme.primaryContainer)
                 .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.primaryContainer)
+
         ) {
             Image(
                 painter = painterResource(id = imageRes),
@@ -422,8 +429,8 @@ private fun CounselorItem(counselor: Counselor) {
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .background(MaterialTheme.colorScheme.primary)
-                .clip(RoundedCornerShape(5.dp))
+                .clip(RoundedCornerShape(8.dp)) // 增加圆角效果
+                .background(MaterialTheme.colorScheme.primaryContainer) // 使用新的按钮蓝色
                 .clickable {},
             contentAlignment = Alignment.Center
         ) {

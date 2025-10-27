@@ -1,9 +1,6 @@
 package com.example.ui.features
 
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.*
 
 import android.app.Activity
 import android.content.Intent
@@ -19,6 +16,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -209,110 +207,144 @@ fun QuickConsultationScreen() {
         ) {
             if (isSuccess) {
                 // 成功页面
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.CheckCircle,
-                        contentDescription = "咨询成功",
-                        modifier = Modifier.size(100.dp),
-                        tint = Color.Green
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Text(
-                        text = "快速咨询申请已提交成功",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "我们会尽快为您匹配咨询师",
-                        fontSize = 14.sp,
-                        color = Color.Gray
-                    )
-                    Spacer(modifier = Modifier.height(48.dp))
-                    Button(
-                        onClick = { (context as Activity).finish() },
-                        modifier = Modifier.fillMaxWidth()
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(text = "确定")
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.CheckCircle,
+                                contentDescription = "咨询成功",
+                                modifier = Modifier.size(80.dp),
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text(
+                            text = "快速咨询申请已提交成功",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "我们会尽快为您匹配咨询师",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(48.dp))
+                        Button(
+                            onClick = { (context as Activity).finish() },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer
+                            )
+                        ) {
+                            Text(
+                                text = "确定",
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
                     }
-                }
             } else {
                 // 表单页面
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(20.dp)
-                ) {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
                     // 问题描述
                     item {
-                        Text("核心心理问题描述", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        TextField(
-                            value = problemDescription,
-                            onValueChange = { problemDescription = it },
-                            placeholder = { Text("请详细描述您的心理问题") },
+                        Card(
                             modifier = Modifier.fillMaxWidth(),
-                            maxLines = 4,
-                            shape = RoundedCornerShape(8.dp),
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color.White,
-                                unfocusedContainerColor = Color.White,
-                                focusedIndicatorColor = Color(0xFF5A67D8),
-                                unfocusedIndicatorColor = Color.LightGray
-                            )
-                        )
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    "核心心理问题描述", 
+                                    fontWeight = FontWeight.Bold, 
+                                    fontSize = 16.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                                TextField(
+                                    value = problemDescription,
+                                    onValueChange = { problemDescription = it },
+                                    placeholder = { Text("请详细描述您的心理问题") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    maxLines = 4,
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = TextFieldDefaults.colors(
+                                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                                        unfocusedIndicatorColor = MaterialTheme.colorScheme.outline
+                                    )
+                                )
+                            }
+                        }
                     }
                     
                     // 问题持续时间
                     item {
-                        Text("问题持续时间", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Box(modifier = Modifier.fillMaxWidth()) {
-                            ExposedDropdownMenuBox(
-                                expanded = isDropdownExpanded,
-                                onExpandedChange = { isDropdownExpanded = it }
-                            ) {
-                                TextField(
-                                    readOnly = true,
-                                    value = problemDuration,
-                                    onValueChange = {},
-                                    trailingIcon = {
-                                        ExposedDropdownMenuDefaults.TrailingIcon(
-                                            expanded = isDropdownExpanded
-                                        )
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .menuAnchor(),
-                                    shape = RoundedCornerShape(8.dp),
-                                    colors = TextFieldDefaults.colors(
-                                        focusedContainerColor = Color.White,
-                                        unfocusedContainerColor = Color.White,
-                                        focusedIndicatorColor = Color(0xFF5A67D8),
-                                        unfocusedIndicatorColor = Color.LightGray
-                                    )
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    "问题持续时间", 
+                                    fontWeight = FontWeight.Bold, 
+                                    fontSize = 16.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(bottom = 8.dp)
                                 )
-                                ExposedDropdownMenu(
+                                ExposedDropdownMenuBox(
                                     expanded = isDropdownExpanded,
-                                    onDismissRequest = { isDropdownExpanded = false },
-                                    modifier = Modifier.fillMaxWidth()
+                                    onExpandedChange = { isDropdownExpanded = it }
                                 ) {
-                                    durationOptions.forEach { option ->
-                                        DropdownMenuItem(
-                                            text = { Text(text = option) },
-                                            onClick = {
-                                                problemDuration = option
-                                                isDropdownExpanded = false
-                                            },
-                                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                                    TextField(
+                                        readOnly = true,
+                                        value = problemDuration,
+                                        onValueChange = {},
+                                        trailingIcon = {
+                                            ExposedDropdownMenuDefaults.TrailingIcon(
+                                                expanded = isDropdownExpanded
+                                            )
+                                        },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .menuAnchor(),
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = TextFieldDefaults.colors(
+                                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                                            unfocusedIndicatorColor = MaterialTheme.colorScheme.outline
                                         )
+                                    )
+                                    ExposedDropdownMenu(
+                                        expanded = isDropdownExpanded,
+                                        onDismissRequest = { isDropdownExpanded = false },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        durationOptions.forEach { option ->
+                                            DropdownMenuItem(
+                                                text = { Text(text = option, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                                onClick = {
+                                                    problemDuration = option
+                                                    isDropdownExpanded = false
+                                                },
+                                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -321,29 +353,45 @@ fun QuickConsultationScreen() {
                     
                     // 偏好咨询方式
                     item {
-                        Text("偏好咨询方式", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(
+                        Card(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                         ) {
-                            consultationMethods.forEach { (value, label) ->
-                                val isSelected = preferredMethod == value
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(48.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(color = if (isSelected) Color(0xFF5A67D8) else Color.LightGray)
-                                        .clickable { preferredMethod = value }
-                                        .padding(12.dp),
-                                    contentAlignment = Alignment.Center
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    "偏好咨询方式", 
+                                    fontWeight = FontWeight.Bold, 
+                                    fontSize = 16.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    Text(
-                                        text = label,
-                                        color = if (isSelected) Color.White else Color.Black,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                    )
+                                    consultationMethods.forEach { (value, label) ->
+                                        val isSelected = preferredMethod == value
+                                        Surface(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .height(48.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .clickable { preferredMethod = value },
+                                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = label,
+                                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -351,45 +399,58 @@ fun QuickConsultationScreen() {
                     
                     // 图片上传
                     item {
-                        Text("上传相关图片（选填）", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(150.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(color = Color.LightGray)
-                                .clickable {
-                                    val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-                                    pickImageLauncher.launch(intent)
-                                },
-                            contentAlignment = Alignment.Center
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                         ) {
-                            if (selectedImageUri != null) {
-                                Image(
-                                    painter = rememberAsyncImagePainter(model = selectedImageUri),
-                                    contentDescription = "已选图片",
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .clip(RoundedCornerShape(8.dp)),
-                                    contentScale = ContentScale.Crop
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    "上传相关图片（选填）", 
+                                    fontWeight = FontWeight.Bold, 
+                                    fontSize = 16.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(bottom = 8.dp)
                                 )
-                            } else {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(150.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable {
+                                            val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+                                            pickImageLauncher.launch(intent)
+                                        },
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    shape = RoundedCornerShape(8.dp)
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.AddCircle,
-                                        contentDescription = "选择图片",
-                                        modifier = Modifier.size(32.dp),
-                                        tint = Color.Gray
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        text = "点击选择图片",
-                                        color = Color.Gray
-                                    )
+                                    if (selectedImageUri != null) {
+                                        Image(
+                                            painter = rememberAsyncImagePainter(model = selectedImageUri),
+                                            contentDescription = "已选图片",
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .clip(RoundedCornerShape(8.dp)),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    } else {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center,
+                                            modifier = Modifier.fillMaxSize()
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Filled.AddCircle,
+                                                contentDescription = "选择图片",
+                                                modifier = Modifier.size(32.dp),
+                                                tint = MaterialTheme.colorScheme.outlineVariant
+                                            )
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text(
+                                                text = "点击选择图片",
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -398,11 +459,18 @@ fun QuickConsultationScreen() {
                     // 错误信息
                     if (errorMessage != null) {
                         item {
-                            Text(
-                                text = errorMessage ?: "",
-                                color = Color.Red,
-                                fontSize = 14.sp
-                            )
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = MaterialTheme.colorScheme.errorContainer,
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(
+                                    text = errorMessage ?: "",
+                                    color = MaterialTheme.colorScheme.error,
+                                    fontSize = 14.sp,
+                                    modifier = Modifier.padding(12.dp)
+                                )
+                            }
                         }
                     }
                     
@@ -413,15 +481,22 @@ fun QuickConsultationScreen() {
                             onClick = { submitForm() },
                             modifier = Modifier.fillMaxWidth().height(52.dp),
                             shape = RoundedCornerShape(26.dp),
-                            enabled = !isLoading
+                            enabled = !isLoading,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer
+                            )
                         ) {
                             if (isLoading) {
                                 CircularProgressIndicator(
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                                     modifier = Modifier.size(20.dp)
                                 )
                             } else {
-                                Text(text = "提交咨询申请", fontSize = 16.sp)
+                                Text(
+                                    text = "提交咨询申请", 
+                                    fontSize = 16.sp,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
                             }
                         }
                     }

@@ -3,18 +3,7 @@ package com.example.ui.features
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,12 +13,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -171,13 +155,14 @@ fun CounselorDetailScreen(counselorId: Int, onBackPress: () -> Unit) {
             ) {
                 // 咨询师基本信息
                 item {
-                    Box(
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color.White)
-                            .padding(16.dp)
+                            .padding(16.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(16.dp)) {
                             // 头像
                             val imageUrl = IpAddressManager.processImageUrl(counselor!!.photoUrl)
                             AsyncImage(
@@ -196,13 +181,14 @@ fun CounselorDetailScreen(counselorId: Int, onBackPress: () -> Unit) {
                                 Text(
                                     text = counselor!!.realName,
                                     fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = "${counselor!!.yearsOfExperience}年从业经验",
                                     fontSize = 14.sp,
-                                    color = Color.Gray
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -220,7 +206,7 @@ fun CounselorDetailScreen(counselorId: Int, onBackPress: () -> Unit) {
                                     Text(
                                         text = "· 已服务${counselor!!.totalSessions}人次",
                                         fontSize = 14.sp,
-                                        color = Color.Gray
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -230,24 +216,27 @@ fun CounselorDetailScreen(counselorId: Int, onBackPress: () -> Unit) {
 
                 // 咨询费用
                 item {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Box(
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color.White)
-                            .padding(16.dp)
+                            .padding(horizontal = 16.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(16.dp)
+                        ) {
                             Text(
                                 text = "咨询费用",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.width(80.dp)
+                                modifier = Modifier.width(80.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = "¥${counselor!!.consultationFee}/次起",
                                 fontSize = 16.sp,
-                                color = Color.Red
+                                color = MaterialTheme.colorScheme.error
                             )
                         }
                     }
@@ -255,24 +244,25 @@ fun CounselorDetailScreen(counselorId: Int, onBackPress: () -> Unit) {
 
                 // 擅长领域
                 item {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Box(
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color.White)
-                            .padding(16.dp)
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
-                        Column {
+                        Column(modifier = Modifier.padding(16.dp)) {
                             Text(
                                 text = "擅长领域",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(bottom = 12.dp)
+                                modifier = Modifier.padding(bottom = 12.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = CounselorUtils.parseSpecialization(counselor!!.specialization),
                                 fontSize = 14.sp,
-                                color = Color(0xFF333333)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                lineHeight = 20.sp
                             )
                         }
                     }
@@ -280,24 +270,25 @@ fun CounselorDetailScreen(counselorId: Int, onBackPress: () -> Unit) {
 
                 // 治疗流派
                 item {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Box(
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color.White)
-                            .padding(16.dp)
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
-                        Column {
+                        Column(modifier = Modifier.padding(16.dp)) {
                             Text(
                                 text = "治疗流派",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(bottom = 12.dp)
+                                modifier = Modifier.padding(bottom = 12.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = CounselorUtils.parseTherapeuticApproach(counselor!!.therapeuticApproach),
                                 fontSize = 14.sp,
-                                color = Color(0xFF333333)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                lineHeight = 20.sp
                             )
                         }
                     }
@@ -305,24 +296,24 @@ fun CounselorDetailScreen(counselorId: Int, onBackPress: () -> Unit) {
 
                 // 个人介绍
                 item {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Box(
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color.White)
-                            .padding(16.dp)
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
-                        Column {
+                        Column(modifier = Modifier.padding(16.dp)) {
                             Text(
                                 text = "个人介绍",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(bottom = 12.dp)
+                                modifier = Modifier.padding(bottom = 12.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = counselor!!.introduction ?: "暂无个人介绍",
                                 fontSize = 14.sp,
-                                color = Color(0xFF333333),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 lineHeight = 20.sp
                             )
                         }
@@ -331,19 +322,19 @@ fun CounselorDetailScreen(counselorId: Int, onBackPress: () -> Unit) {
 
                 // 服务信息
                 item {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Box(
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color.White)
-                            .padding(16.dp)
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
-                        Column {
+                        Column(modifier = Modifier.padding(16.dp)) {
                             Text(
                                 text = "服务信息",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(bottom = 12.dp)
+                                modifier = Modifier.padding(bottom = 12.dp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
                             // 服务类型
@@ -354,16 +345,16 @@ fun CounselorDetailScreen(counselorId: Int, onBackPress: () -> Unit) {
                                 Text(
                                     text = "服务类型:",
                                     fontSize = 14.sp,
-                                    color = Color.Gray,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.width(80.dp)
                                 )
                                 Text(
                                     text = CounselorUtils.parseServiceTypes(counselor!!.serviceTypes),
                                     fontSize = 14.sp,
-                                    color = Color(0xFF333333)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Divider(modifier = Modifier.padding(vertical = 8.dp))
 
                             // 可用日期
                             Row(
@@ -373,16 +364,16 @@ fun CounselorDetailScreen(counselorId: Int, onBackPress: () -> Unit) {
                                 Text(
                                     text = "可用日期:",
                                     fontSize = 14.sp,
-                                    color = Color.Gray,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.width(80.dp)
                                 )
                                 Text(
                                     text = CounselorUtils.parseAvailableDays(counselor!!.availableDays),
                                     fontSize = 14.sp,
-                                    color = Color(0xFF333333)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Divider(modifier = Modifier.padding(vertical = 8.dp))
 
                             // 工作时间
                             Row(
@@ -392,16 +383,16 @@ fun CounselorDetailScreen(counselorId: Int, onBackPress: () -> Unit) {
                                 Text(
                                     text = "工作时间:",
                                     fontSize = 14.sp,
-                                    color = Color.Gray,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.width(80.dp)
                                 )
                                 Text(
                                     text = CounselorUtils.parseWorkingHours(counselor!!.workingHours),
                                     fontSize = 14.sp,
-                                    color = Color(0xFF333333)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Divider(modifier = Modifier.padding(vertical = 8.dp))
 
                             // 咨询时长
                             Row(
@@ -411,13 +402,13 @@ fun CounselorDetailScreen(counselorId: Int, onBackPress: () -> Unit) {
                                 Text(
                                     text = "咨询时长:",
                                     fontSize = 14.sp,
-                                    color = Color.Gray,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.width(80.dp)
                                 )
                                 Text(
                                     text = "${CounselorUtils.parseSessionDurations(counselor!!.sessionDurations)}分钟",
                                     fontSize = 14.sp,
-                                    color = Color(0xFF333333)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -433,19 +424,19 @@ fun CounselorDetailScreen(counselorId: Int, onBackPress: () -> Unit) {
                             .padding(horizontal = 16.dp)
                             .padding(bottom = 24.dp)
                     ) {
-                        Row(
+                        Button(
+                            onClick = { /* 预约处理逻辑 */ },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(MaterialTheme.colorScheme.primary)
-                                .height(48.dp)
-                                .clip(RoundedCornerShape(24.dp))
-                                .clickable {},
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
+                                .height(48.dp),
+                            shape = RoundedCornerShape(24.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer
+                            )
                         ) {
                             Text(
                                 text = "立即预约",
-                                color = MaterialTheme.colorScheme.onPrimary,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold
                             )

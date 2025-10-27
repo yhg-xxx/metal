@@ -1,6 +1,6 @@
 package com.example.ui.features
 
-import android.annotation.SuppressLint
+
 import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -17,7 +17,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+
+
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -54,8 +55,6 @@ import java.text.SimpleDateFormat
 import java.util.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 
-
-
 // 从Uri创建临时文件
 fun createTempFileFromUri(context: android.content.Context, uri: Uri): File {
     val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
@@ -75,24 +74,15 @@ class ProfileEditActivity : AppCompatActivity() {
     private val apiService = RetrofitClient.apiService
 
     @RequiresApi(Build.VERSION_CODES.R)
-    @SuppressLint("WrongConstant")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         dbHelper = DatabaseHelper(this)
 
-        // 关键修改：确保内容不会延伸到状态栏区域
+        // 启用边缘到边缘显示
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        // 设置状态栏透明 - 使用 Android 的颜色常量而不是 Compose 的 Color
-        window.statusBarColor = android.graphics.Color.TRANSPARENT
-        // 获取窗口插入控制器
-        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-
-        // 设置状态栏文字为深色（适用于浅色背景）
-        windowInsetsController.isAppearanceLightStatusBars = true
-
-        // 显示状态栏
-        windowInsetsController.show(androidx.core.view.WindowInsetsCompat.Type.statusBars())
+        // 设置沉浸式状态栏
+        setupImmersiveStatusBar()
 
         setContent {
             MentalTheme {
@@ -103,6 +93,15 @@ class ProfileEditActivity : AppCompatActivity() {
                 )
             }
         }
+    }
+
+    private fun setupImmersiveStatusBar() {
+        // 让布局可以全屏，延展到状态栏里
+        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars =
+            false
+
+        // 设置状态栏颜色为透明
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
     }
 }
 
@@ -275,8 +274,7 @@ fun ProfileEditScreen(
     
     Scaffold(
         modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding(), // 添加状态栏内边距
+            .fillMaxSize(), // 移除固定的状态栏内边距，让内容能够延伸到状态栏区域
         topBar = {
             // 使用与首页一致的TopAppBar实现
             TopAppBar(
@@ -307,7 +305,7 @@ fun ProfileEditScreen(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary
                 ),
-                modifier = Modifier.clip(RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp))
+
             )
         }
     ) { paddingValues ->

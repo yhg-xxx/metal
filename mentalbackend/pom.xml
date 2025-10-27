@@ -95,10 +95,22 @@
             <artifactId>poi-ooxml</artifactId>
             <version>5.2.3</version>
         </dependency>
-        <!-- WebSocket支持 -->
+        <!-- WebSocket支持 - 用于实时通信和WebRTC信令 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+        
+        <!-- 额外的WebSocket消息处理库 - 增强对STOMP协议的支持 -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-messaging</artifactId>
+        </dependency>
+        
+        <!-- 用于处理JSON格式的WebRTC信令数据 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
         </dependency>
         
         <!-- Servlet API -->

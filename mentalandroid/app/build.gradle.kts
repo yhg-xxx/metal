@@ -1,3 +1,6 @@
+
+
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -50,6 +53,10 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.compose.material.icons.extended)
+    implementation(fileTree(mapOf(
+        "dir" to "../webrtc",
+        "include" to listOf("*.aar")
+    )))
 
     
     // Network dependencies

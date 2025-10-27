@@ -31,7 +31,7 @@ fun BottomNavigationBar(
     NavigationBar(
         modifier = Modifier,
         containerColor = Color.White,
-        contentColor = MaterialTheme.colorScheme.primary
+        contentColor = MaterialTheme.colorScheme.primaryContainer
     ) {
         // 遍历所有导航项
         BottomNavigationItem.entries.forEach {
@@ -41,7 +41,7 @@ fun BottomNavigationBar(
                         imageVector = it.icon,
                         contentDescription = it.label,
                         tint = if (selectedTab == it) {
-                            MaterialTheme.colorScheme.primary
+                            MaterialTheme.colorScheme.primaryContainer
                         } else {
                             Color.Gray
                         }
@@ -51,7 +51,7 @@ fun BottomNavigationBar(
                     Text(
                         text = it.label,
                         color = if (selectedTab == it) {
-                            MaterialTheme.colorScheme.primary
+                            MaterialTheme.colorScheme.primaryContainer
                         } else {
                             Color.Gray
                         },

@@ -15,6 +15,7 @@ import org.json.JSONArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -37,11 +38,37 @@ public class CounselorsServiceImpl extends ServiceImpl<CounselorsMapper, Counsel
     private static final Logger log = LoggerFactory.getLogger(CounselorsServiceImpl.class);
 
     @Resource
+    @Lazy
     private UsersService usersService;
 
     @Resource
     private CounselorServiceSettingsService counselorServiceSettingsService;
 
+    @Override
+    public CounselorDTO getCounselorDetailByUserId(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        
+        try {
+            // 根据用户ID查询咨询师信息
+            QueryWrapper<Counselors> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("user_id", userId);
+            Counselors counselor = this.getOne(queryWrapper);
+            
+            if (counselor == null) {
+                return null;
+            }
+            
+            // 调用现有的getCounselorDetail方法获取完整详情
+            return getCounselorDetail(counselor.getId());
+            
+        } catch (Exception e) {
+            log.error("根据用户ID查询咨询师详情失败: userId={}, error={}", userId, e.getMessage());
+            return null;
+        }
+    }
+    
     @Override
     public List<CounselorDTO> searchAndFilterCounselors(CounselorDTO counselorDTO) {
         QueryWrapper<Counselors> queryWrapper = new QueryWrapper<>();

@@ -6,7 +6,7 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 
-import androidx.compose.foundation.border
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -219,7 +219,7 @@ fun CounselorSearchScreen(
             modifier = Modifier
                 .padding(4.dp)
                 .background(
-                    if (isSelected) Color(0xFF5A67D8) else Color(0xFFE2E8F0),
+                    if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.White,
                     RoundedCornerShape(16.dp)
                 )
                 .padding(horizontal = 12.dp, vertical = 6.dp)
@@ -233,7 +233,7 @@ fun CounselorSearchScreen(
         }
     }
     
-    // 渲染筛选弹窗
+    // 渲染筛选弹窗 - 使用Material3组件优化
     @Composable
     fun FilterDialog(
         title: String,
@@ -243,53 +243,71 @@ fun CounselorSearchScreen(
         onDismiss: () -> Unit
     ) {
         Dialog(onDismissRequest = onDismiss) {
-            Surface(
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 600.dp)
-                    .clip(RoundedCornerShape(16.dp)),
-                color = Color.White
+                    .heightIn(max = 600.dp),
+                shape = RoundedCornerShape(24.dp) // Material3推荐的圆角
             ) {
                 Column {
-                    // 弹窗标题
+                    // 弹窗标题 - 使用Material3的TopAppBar样式
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp)
-                            .border(1.dp, Color(0xFFE2E8F0)),
+                            .padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = title, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Button(onClick = onDismiss) {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Button(
+                            onClick = onDismiss,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer
+                            )
+                        ) {
                             Text("确定")
                         }
                     }
+                    
+                    // 添加分割线
+                    Divider()
                     
                     // 选项列表
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp)
+                            .padding(8.dp)
                     ) {
-                        items(options) {
+                        items(options) { option ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(12.dp)
                                     .clickable {
-                                        onToggleOption(it)
+                                        onToggleOption(option)
                                     },
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Checkbox(
-                                    checked = selectedOptions.contains(it),
+                                    checked = selectedOptions.contains(option),
                                     onCheckedChange = { isChecked ->
-                                        onToggleOption(it)
-                                    }
+                                        onToggleOption(option)
+                                    },
+                                    colors = CheckboxDefaults.colors(
+                                        checkedColor = MaterialTheme.colorScheme.primaryContainer,
+                                        checkmarkColor = Color.White
+                                    )
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(text = it)
+                                Text(
+                                    text = option,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
                             }
                         }
                     }
@@ -361,7 +379,7 @@ fun CounselorSearchScreen(
                     Text(
                         text = CounselorUtils.getServiceLabels(counselor),
                         fontSize = 12.sp,
-                        color = Color(0xFF5A67D8)
+                        color = MaterialTheme.colorScheme.primaryContainer
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
@@ -376,8 +394,8 @@ fun CounselorSearchScreen(
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .background(Color(0xFF5A67D8))
-                    .clip(RoundedCornerShape(5.dp))
+                    .clip(RoundedCornerShape(8.dp)) // 增加圆角效果
+                    .background(MaterialTheme.colorScheme.primaryContainer) // 使用主题色
                     .clickable { 
                         // 点击事件处理（空实现，仅用于阻止事件冒泡）
                     },
@@ -449,7 +467,7 @@ fun CounselorSearchScreen(
                             Icon(
                                 imageVector = Icons.Filled.Search,
                                 contentDescription = "搜索",
-                                tint = Color.Gray,
+                                tint = MaterialTheme.colorScheme.primaryContainer,
                                 modifier = Modifier.size(25.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
@@ -494,7 +512,7 @@ fun CounselorSearchScreen(
                         modifier = Modifier
                             .size(48.dp)
                             .clip(RoundedCornerShape(24.dp))
-                            .background(Color(0xFF5A67D8))
+                            .background(MaterialTheme.colorScheme.primaryContainer) // 使用主题色
                             .clickable { searchCounselors() },
                         contentAlignment = Alignment.Center
                     ) {
@@ -528,7 +546,7 @@ fun CounselorSearchScreen(
                                     Text(text = "当前筛选条件", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                                     Text(
                                     text = "清除全部",
-                                    color = Color(0xFF5A67D8),
+                                    color = MaterialTheme.colorScheme.primaryContainer,
                                     fontSize = 12.sp,
                                     modifier = Modifier.clickable { clearAllFilters() }
                                 )
