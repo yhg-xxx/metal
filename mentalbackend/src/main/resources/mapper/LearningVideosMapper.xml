@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mapper.LearningVideosMapper">
+    
+    <!-- 根据学习包ID获取视频列表 -->
+    <select id="getVideosByPackageId" resultType="com.example.entity.LearningVideos">
+        SELECT * FROM learning_videos 
+        WHERE learning_package_id = #{learningPackageId}
+        ORDER BY sort_order ASC, created_time DESC
+    </select>
+    
+    <!-- 根据视频ID获取视频详情 -->
+    <select id="getVideoById" resultType="com.example.entity.LearningVideos">
+        SELECT * FROM learning_videos 
+        WHERE id = #{id}
+    </select>
+</mapper>

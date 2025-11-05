@@ -78,7 +78,7 @@
             android:theme="@style/Theme.Mental"
             android:windowSoftInputMode="stateHidden|adjustResize" />
         <activity
-            android:name=".ui.features.VideoPlayerActivity"
+            android:name=".ui.features.VideoDetailActivity"
             android:exported="false"
             android:theme="@style/Theme.Mental" />
         <activity
@@ -89,11 +89,12 @@
             android:name=".ui.features.AssessmentReportActivity"
             android:exported="false"
             android:theme="@style/Theme.Mental" />
+
         <activity
             android:name=".ui.features.VideoCallActivity"
             android:exported="false"
             android:theme="@style/Theme.Mental"
-            android:screenOrientation="portrait"
+            android:screenOrientation="fullSensor"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout" />
 
     </application>

@@ -8,7 +8,7 @@ object IpAddressManager {
     
     // 当前后端服务器IP地址
     // 注意：当IP地址变更时，只需修改此常量即可
-    const val CURRENT_IP_ADDRESS = "192.168.97.109"
+    const val CURRENT_IP_ADDRESS = "192.168.18.109"
 
     // 后端服务器端口
     const val SERVER_PORT = "8080"
@@ -32,5 +32,15 @@ object IpAddressManager {
         processedUrl = processedUrl.replace("http://192.168.167.109:$SERVER_PORT", BASE_URL)
         
         return processedUrl
+    }
+    
+    /**
+     * 处理视频URL，将localhost或旧的IP地址替换为当前的IP地址
+     * @param url 原始视频URL
+     * @return 处理后的视频URL
+     */
+    fun processVideoUrl(url: String?): String? {
+        // 视频URL处理与图片URL处理逻辑相同，可以复用图片URL处理方法
+        return processImageUrl(url)
     }
 }

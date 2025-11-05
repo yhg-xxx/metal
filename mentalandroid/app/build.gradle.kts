@@ -77,7 +77,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.recyclerview)
-    implementation(libs.androidx.media3.effect)
+
     implementation(libs.androidx.camera.core)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

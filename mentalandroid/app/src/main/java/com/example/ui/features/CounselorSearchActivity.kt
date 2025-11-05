@@ -590,8 +590,8 @@ fun CounselorSearchScreen(
                                                     modifier = Modifier
                                                         .weight(1f)
                                                         .height(40.dp)
+                                                        .clip(RoundedCornerShape(20.dp)) // 增加圆角大小，使其更加圆润
                                                         .background(Color.White)
-                                                        .clip(RoundedCornerShape(8.dp))
                                                         .padding(horizontal = 12.dp)
                                                         .clickable { showSpecializationFilter = true },
                                                     contentAlignment = Alignment.Center
@@ -605,8 +605,8 @@ fun CounselorSearchScreen(
                                                     modifier = Modifier
                                                         .weight(1f)
                                                         .height(40.dp)
+                                                        .clip(RoundedCornerShape(20.dp)) // 增加圆角大小，使其更加圆润
                                                         .background(Color.White)
-                                                        .clip(RoundedCornerShape(8.dp))
                                                         .padding(horizontal = 12.dp)
                                                         .clickable { showApproachFilter = true },
                                                     contentAlignment = Alignment.Center
@@ -620,8 +620,8 @@ fun CounselorSearchScreen(
                                                     modifier = Modifier
                                                         .weight(1f)
                                                         .height(40.dp)
+                                                        .clip(RoundedCornerShape(20.dp)) // 增加圆角大小，使其更加圆润
                                                         .background(Color.White)
-                                                        .clip(RoundedCornerShape(8.dp))
                                                         .padding(horizontal = 12.dp)
                                                         .clickable { showServiceTypeFilter = true },
                                                     contentAlignment = Alignment.Center
@@ -640,8 +640,8 @@ fun CounselorSearchScreen(
                                                 Box(
                                                     modifier = Modifier
                                                         .height(40.dp)
+                                                        .clip(RoundedCornerShape(20.dp)) // 增加圆角大小，使其更加圆润
                                                         .background(Color.White)
-                                                        .clip(RoundedCornerShape(8.dp))
                                                         .padding(horizontal = 12.dp),
                                                     contentAlignment = Alignment.Center
                                                 ) {

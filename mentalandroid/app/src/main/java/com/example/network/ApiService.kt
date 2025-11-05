@@ -2,6 +2,8 @@ package com.example.network
 
 import com.example.model.BaseResponse
 import com.example.model.Counselor
+import com.example.model.LearningPackage
+import com.example.model.LearningVideo
 import com.example.model.Message
 import com.example.model.QuickConsultation
 import com.example.model.SearchCounselorsRequest
@@ -88,5 +90,16 @@ interface ApiService {
         @Query("offset") offset: Int = 0
     ): List<Message>
     
+    /**
+     * 获取所有学习包列表
+     */
+    @GET("api/learning-packages")
+    suspend fun getLearningPackages(): BaseResponse<List<LearningPackage>>
+    
+    /**
+     * 根据学习包ID获取视频列表
+     */
+    @GET("api/learning-videos/package/{learningPackageId}")
+    suspend fun getVideosByLearningPackageId(@Path("learningPackageId") learningPackageId: Long): BaseResponse<List<LearningVideo>>
 
 }

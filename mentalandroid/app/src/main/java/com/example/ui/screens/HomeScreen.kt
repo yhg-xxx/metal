@@ -334,10 +334,6 @@ private fun FeatureEntryItem(text: String, imageRes: Int, onClick: (() -> Unit)?
     }
 }
 
-// 测试图片加载功能已抽取到ImageLoadingUtils中
-
-
-
 /**
  * 咨询师项组件
  */

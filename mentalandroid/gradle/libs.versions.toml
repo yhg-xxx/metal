@@ -17,7 +17,8 @@ datastoreCoreAndroid = "1.1.7"
 coil = "2.4.0"
 appcompat = "1.7.1"
 recyclerview = "1.3.2"
-media3Effect = "1.8.0"
+exoplayer = "2.16.1"
+exoplayerUi = "2.16.1"
 cameraCore = "1.5.1"
 
 
@@ -48,7 +49,8 @@ androidx-datastore-core-android = { group = "androidx.datastore", name = "datast
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 androidx-recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
-androidx-media3-effect = { group = "androidx.media3", name = "media3-effect", version.ref = "media3Effect" }
+com-exoplayer-core = { group = "com.google.android.exoplayer2", name = "exoplayer-core", version.ref = "exoplayer" }
+com-exoplayer-ui = { group = "com.google.android.exoplayer2", name = "exoplayer-ui", version.ref = "exoplayerUi" }
 androidx-camera-core = { group = "androidx.camera", name = "camera-core", version.ref = "cameraCore" }
 
 

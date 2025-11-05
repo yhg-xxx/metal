@@ -1,8 +1,5 @@
 package com.example.ui.screens
 
-import kotlin.random.Random
-
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -33,26 +30,83 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import android.content.Context
+import android.content.Intent
+import com.example.ui.features.VideoDetailActivity
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.R
+import com.example.model.LearningPackage
+import com.example.network.RetrofitClient
 import com.example.ui.theme.MentalTheme
+import com.example.util.ImageLoadingUtils
+import coil.compose.AsyncImage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import timber.log.Timber
 
 /**
  * 学习屏幕组件
  * 包含个性化学习包推荐、视频学习等功能
  */
+// 跳转到视频详情页的辅助函数
+fun navigateToVideoDetail(context: Context, learningPackage: LearningPackage) {
+    val intent = Intent(context, VideoDetailActivity::class.java)
+    intent.putExtra("learningPackageId", learningPackage.id.toLong())
+    intent.putExtra("learningPackageTitle", learningPackage.title)
+    context.startActivity(intent)
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LearningScreen(modifier: Modifier = Modifier) {
+    val apiService = RetrofitClient.apiService
+    val context = LocalContext.current
+    
+    // 保存context以供非Composable函数使用
+    val savedContext = remember { context }
+    
+    var learningPackages by remember { mutableStateOf<List<LearningPackage>?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+
+
+    // 加载学习包数据
+    LaunchedEffect(Unit) {
+        isLoading = true
+        try {
+            val response = withContext(Dispatchers.IO) {
+                apiService.getLearningPackages()
+            }
+            
+            if (response.code == 200) {
+                // 显示所有获取到的学习包数据
+                learningPackages = response.data
+            } else {
+                errorMessage = "获取学习包失败: ${response.msg}"
+                Timber.tag("LearningScreen").e(errorMessage.toString())
+            }
+        } catch (e: Exception) {
+            errorMessage = "网络请求异常: ${e.message}"
+            Timber.tag("LearningScreen").e(e, "Failed to fetch learning packages")
+        } finally {
+            isLoading = false
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -98,7 +152,7 @@ fun LearningScreen(modifier: Modifier = Modifier) {
                 )
                 
                 // 个性化推荐学习包
-                RecommendedLearningPackage()
+            RecommendedLearningPackage(learningPackages)
             }
             
             // 学习包分类
@@ -142,10 +196,48 @@ fun LearningScreen(modifier: Modifier = Modifier) {
                 
                 // 热门学习包列表
                 Spacer(modifier = Modifier.height(12.dp))
-                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    for (i in 0 until 3) {
-                        LearningPackageItem()
-                        Spacer(modifier = Modifier.height(12.dp))
+                if (isLoading) {
+                    // 显示加载状态
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .height(100.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = "加载中...", color = Color.Gray)
+                    }
+                } else if (errorMessage != null) {
+                    // 显示错误信息
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .height(100.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = errorMessage ?: "加载失败", color = Color.Red)
+                    }
+                } else if (learningPackages?.isNotEmpty() == true) {
+                    // 使用从API获取的数据
+                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        learningPackages?.forEachIndexed { index, packageItem ->
+                            LearningPackageItem(packageItem, onPackageClick = { navigateToVideoDetail(savedContext, it) })
+                            if (index < (learningPackages?.size ?: 0) - 1) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                            }
+                        }
+                    }
+                } else {
+                    // 显示空状态
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .height(100.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = "暂无学习包", color = Color.Gray)
                     }
                 }
             }
@@ -174,79 +266,105 @@ fun LearningScreen(modifier: Modifier = Modifier) {
 
 /**
  * 推荐学习包组件
+ * 使用学习包数据的第一条作为推荐内容
  */
 @Composable
-private fun RecommendedLearningPackage() {
-    val recommendedReason = "针对您的职场压力困扰，推荐以下缓解技巧视频"
+private fun RecommendedLearningPackage(learningPackages: List<LearningPackage>?) {
+    // 获取学习包数据的第一条（如果有）
+    val recommendedPackage = learningPackages?.firstOrNull()
     
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .background(Color.White)
-            .clip(RoundedCornerShape(10.dp))
-            .clickable {}
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Star,
-                    contentDescription = "推荐",
-                    tint = Color(0xFFF5A623),
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "个性化推荐",
-                    fontSize = 14.sp,
-                    color = Color(0xFFF5A623),
-                    fontWeight = FontWeight.Medium
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = recommendedReason,
-                fontSize = 14.sp,
-                color = Color.Gray,
-                modifier = Modifier.fillMaxWidth()
-            )
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.img),
-                    contentDescription = "职场压力管理学习包",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
+    if (recommendedPackage != null) {
+        // 使用学习包的description作为推荐原因
+        val recommendedReason = recommendedPackage.description
+        
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .background(Color.White)
+                .clip(RoundedCornerShape(10.dp))
+//                .clickable { recommendedPackage.let { navigateToVideoDetail(savedContext, it) } }
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Star,
+                        contentDescription = "推荐",
+                        tint = Color(0xFFF5A623),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "职场压力管理学习包",
-                        fontSize = 16.sp,
+                        text = "个性化推荐",
+                        fontSize = 14.sp,
+                        color = Color(0xFFF5A623),
                         fontWeight = FontWeight.Medium
                     )
-                    Text(
-                        text = "5个视频 · 专业心理咨询师讲解",
-                        fontSize = 12.sp,
-                        color = Color.Gray
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = recommendedReason,
+                    fontSize = 14.sp,
+                    color = Color.Gray,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // 使用ImageLoadingUtils处理图片URL并加载
+                    AsyncImage(
+                        model = ImageLoadingUtils.processImageUrl(recommendedPackage.coverImageUrl),
+                        contentDescription = recommendedPackage.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(60.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = recommendedPackage.title,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "${recommendedPackage.videoCount}个视频 · 预计${recommendedPackage.estimatedDurationMinutes}分钟",
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = "更多",
+                        tint = Color.Gray
                     )
                 }
-                Icon(
-                    imageVector = Icons.Filled.MoreVert,
-                    contentDescription = "更多",
-                    tint = Color.Gray
-                )
             }
+        }
+    } else {
+        // 如果没有学习包数据，显示空状态
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .height(120.dp)
+                .background(Color.White)
+                .clip(RoundedCornerShape(10.dp))
+                .padding(16.dp)
+        ) {
+            Text(
+                text = "暂无推荐内容",
+                fontSize = 14.sp,
+                color = Color.Gray,
+                modifier = Modifier.align(Alignment.Center)
+            )
         }
     }
 }
@@ -259,8 +377,8 @@ private fun LearningCategoryItem(text: String) {
     Box(
         modifier = Modifier
             .height(36.dp)
-            .background(if (text == "全部") Color(0xFF5A67D8) else Color.White)
-            .clip(RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(18.dp)) // 统一的分类按钮圆角样式
+            .background(if (text == "全部") MaterialTheme.colorScheme.primaryContainer else Color.White)
             .padding(horizontal = 16.dp)
             .clickable {},
         contentAlignment = Alignment.Center
@@ -278,72 +396,50 @@ private fun LearningCategoryItem(text: String) {
  * 学习包项组件
  */
 @Composable
-private fun LearningPackageItem() {
-    val packageNames = listOf("情绪管理基础", "有效沟通技巧", "亲子关系建立", "压力缓解策略")
-    val randomName = packageNames.random()
-    val videoCount = (3..5).random()
-    
+private fun LearningPackageItem(learningPackage: LearningPackage, onPackageClick: (LearningPackage) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
             .clip(RoundedCornerShape(8.dp))
-            .clickable {},
+            .background(Color.White)
+            .clickable { onPackageClick(learningPackage) },
         verticalAlignment = Alignment.CenterVertically
     ) {
         // 学习包封面
-        Image(
-            painter = painterResource(id = R.drawable.img),
-            contentDescription = "$randomName 学习包",
+        AsyncImage(
+            model = ImageLoadingUtils.processImageUrl(learningPackage.coverImageUrl),
+            contentDescription = "${learningPackage.title} 学习包",
+            contentScale = ContentScale.Crop,
             modifier = Modifier
                 .width(80.dp)
                 .height(80.dp)
                 .clip(RoundedCornerShape(8.dp))
         )
         
-        // 学习包信息
+        // 学习包信息 - 显示真实的视频数量和预计学习时间
         Column(
             modifier = Modifier.weight(1f).padding(12.dp)
         ) {
             Text(
-                text = randomName,
+                text = learningPackage.title,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "$videoCount 个视频课程 · ${(1000..9999).random()} 人已学习",
+                text = "${learningPackage.videoCount} 个视频 · 预计${learningPackage.estimatedDurationMinutes}分钟",
                 fontSize = 12.sp,
                 color = Color.Gray
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                repeat(5) {
-                    Icon(
-                        imageVector = Icons.Filled.Star,
-                        contentDescription = "评分",
-                        tint = Color(0xFFF5A623),
-                        modifier = Modifier.size(12.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "${(4.5 + Random.nextDouble() * 0.5).toString().take(3)}分",
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
-            }
         }
         
         // 学习按钮
         IconButton(
-            onClick = { /* 学习按钮点击事件 */ },
+            onClick = { onPackageClick(learningPackage) },
             modifier = Modifier
                 .size(40.dp)
-                .background(Color(0xFF5A67D8))
-                .clip(RoundedCornerShape(20.dp))
+                .clip(RoundedCornerShape(20.dp)) // 统一的学习按钮圆角样式
+                .background(MaterialTheme.colorScheme.primaryContainer)
                 .padding(8.dp)
         ) {
             Icon(
@@ -375,8 +471,8 @@ private fun RecentLearningVideoItem() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
             .clip(RoundedCornerShape(8.dp))
+            .background(Color.White)
             .clickable {}
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
@@ -384,20 +480,17 @@ private fun RecentLearningVideoItem() {
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(modifier = Modifier) {
-                    Image(
-                        painter = painterResource(id = R.drawable.img),
-                        contentDescription = randomName,
-                        modifier = Modifier
-                            .size(80.dp)
-                            .height(60.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                    )
+                Box(modifier = Modifier
+                    .size(80.dp)
+                    .height(60.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color.Gray)
+                ) {
                     Box(
                         modifier = Modifier
                             .size(24.dp)
-                            .background(Color(0x80000000))
                             .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer)
                             .align(Alignment.Center)
                     ) {
                         Icon(
@@ -425,15 +518,15 @@ private fun RecentLearningVideoItem() {
                             modifier = Modifier
                                 .height(2.dp)
                                 .weight(1f)
-                                .background(Color(0xFFEEEEEE))
                                 .clip(RoundedCornerShape(1.dp))
+                                .background(Color(0xFFEEEEEE))
                         ) {
                             Box(
                                 modifier = Modifier
                                     .height(2.dp)
                                     .width((progress * 100).dp)
-                                    .background(Color(0xFF5A67D8))
                                     .clip(RoundedCornerShape(1.dp))
+                                    .background(Color(0xFF5A67D8))
                             )
                         }
                         Spacer(modifier = Modifier.width(8.dp))
