@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,14 +18,21 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -37,23 +44,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-
+import com.example.model.Task
 import com.example.splash.SplashActivity
-
+import com.example.ui.features.ChildInfoScreenActivity
 import com.example.ui.features.ProfileEditActivity
 import com.example.util.DatabaseHelper
 import com.example.util.IpAddressManager
+import com.example.util.TaskReminderService
 import com.example.ui.theme.MentalTheme
+import java.text.SimpleDateFormat
+import java.util.*
 
 /**
  * 个人主页屏幕组件
- * 简化版：只显示头像、用户名、查看修改个人信息和退出登录功能
+ * 包含用户信息、计划清单功能、退出登录等
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,9 +74,60 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
     var loggedInUser by remember { mutableStateOf(dbHelper.getLoggedInUser()) }
     var username by remember { mutableStateOf(loggedInUser?.username ?: "用户${(10000..99999).random()}") }
     
+    // 任务相关状态
+    var tasks by remember { mutableStateOf(listOf<Task>()) }
+    var showAddTaskDialog by remember { mutableStateOf(false) }
+    var newTaskTitle by remember { mutableStateOf("") }
+    var newTaskDescription by remember { mutableStateOf("") }
+    var taskPriority by remember { mutableStateOf(1) }
+    
+    // 加载任务数据
+    LaunchedEffect(Unit) {
+        tasks = dbHelper.getAllTasks()
+        // 设置每日任务提醒
+        TaskReminderService.setDailyTaskReminder(context)
+    }
+    
     LaunchedEffect(key1 = loggedInUser) {
         username = loggedInUser?.username ?: "用户${(10000..99999).random()}"
     }
+    
+    // 添加任务
+    val addTask = {
+        if (newTaskTitle.isNotBlank()) {
+            val task = Task(
+                title = newTaskTitle,
+                description = newTaskDescription,
+                priority = taskPriority
+            )
+            dbHelper.addTask(task)
+            tasks = dbHelper.getAllTasks()
+            // 重置表单
+            newTaskTitle = ""
+            newTaskDescription = ""
+            taskPriority = 1
+            showAddTaskDialog = false
+        }
+    }
+    
+    // 切换任务完成状态
+    val toggleTaskCompletion = { taskId: Int ->
+        val task = tasks.find { it.id == taskId }
+        if (task != null) {
+            val updatedTask = task.copy(isCompleted = !task.isCompleted)
+            dbHelper.updateTask(updatedTask)
+            tasks = dbHelper.getAllTasks()
+        }
+    }
+    
+    // 删除任务
+    val deleteTask = { taskId: Int ->
+        dbHelper.deleteTask(taskId)
+        tasks = dbHelper.getAllTasks()
+    }
+    
+    // 日期格式化
+    val dateFormat = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
     
     Scaffold(
         topBar = {
@@ -114,6 +176,68 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
                 }
             }
             
+            // 计划清单标题
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "计划清单",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
+                            .clickable {
+                                showAddTaskDialog = true
+                            }
+                            .padding(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Add,
+                            contentDescription = "添加任务",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
+            
+            // 任务列表
+            if (tasks.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "暂无任务，点击右上角添加",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                tasks.forEach { task ->
+                    item {
+                        TaskItem(
+                            task = task,
+                            dateFormat = dateFormat,
+                            onToggleCompletion = { toggleTaskCompletion(task.id) },
+                            onDelete = { deleteTask(task.id) }
+                        )
+                    }
+                }
+            }
+            
             // 功能菜单
             item {
                 FeatureMenu()
@@ -124,6 +248,77 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
                 Spacer(modifier = Modifier.height(40.dp))
             }
         }
+    }
+    
+    // 添加任务对话框
+    if (showAddTaskDialog) {
+        AlertDialog(
+            onDismissRequest = { showAddTaskDialog = false },
+            title = { Text("添加新任务") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = newTaskTitle,
+                        onValueChange = { newTaskTitle = it },
+                        label = { Text("任务标题") },
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 1
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = newTaskDescription,
+                        onValueChange = { newTaskDescription = it },
+                        label = { Text("任务描述（可选）") },
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 3
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(text = "优先级:")
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        listOf("低", "中", "高").forEachIndexed { index, label ->
+                            val priorityValue = index + 1
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(4.dp)
+                                    .background(
+                                        if (taskPriority == priorityValue) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.surfaceVariant
+                                        }
+                                    )
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .clickable {
+                                        taskPriority = priorityValue
+                                    }
+                                    .padding(8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = label,
+                                    color = if (taskPriority == priorityValue) {
+                                        MaterialTheme.colorScheme.onPrimary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = addTask) {
+                    Text("确认")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddTaskDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
     }
 }
 
@@ -141,13 +336,18 @@ private fun UserInfoCard(context: Context, loggedInUser: Any?, username: String)
             val currentUser = loggedInUser as? com.example.model.User
             val avatarUrl = currentUser?.avatarUrl
             val processedAvatarUrl = IpAddressManager.processImageUrl(avatarUrl)
-            AsyncImage(
-                model = processedAvatarUrl,
-                contentDescription = "用户头像",
+            Box(
                 modifier = Modifier
                     .size(80.dp)
-                    .clip(CircleShape)
-            )
+                    .clip(RoundedCornerShape(10.dp))
+            ) {
+                AsyncImage(
+                    model = processedAvatarUrl,
+                    contentDescription = "用户头像",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
             
             // 用户信息
             Column(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
@@ -225,6 +425,7 @@ private fun LogoutButton(context: Context, dbHelper: DatabaseHelper, onLogout: (
 
 @Composable
 private fun FeatureMenu() {
+    val context = LocalContext.current
     Column(modifier = Modifier.padding(16.dp)) {
         // 推荐学习入口
         ProfileMenuItem(
@@ -239,7 +440,135 @@ private fun FeatureMenu() {
             description = "查看心理状态评估报告",
             onClick = { /* 跳转到评估记录页面 */ }
         )
+        
+        // 孩子信息管理入口
+        ProfileMenuItem(
+            title = "孩子信息管理",
+            description = "管理孩子的基本信息和健康状况",
+            onClick = { 
+                // 跳转到孩子信息管理页面
+                context.startActivity(
+                    Intent(context, ChildInfoScreenActivity::class.java)
+                )
+            }
+        )
     }
+}
+
+/**
+ * 任务项组件
+ */
+@Composable
+private fun TaskItem(
+    task: Task,
+    dateFormat: SimpleDateFormat,
+    onToggleCompletion: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // 任务完成状态按钮
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(
+                    if (task.isCompleted) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    }
+                )
+                .clickable(onClick = onToggleCompletion)
+                .padding(2.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (task.isCompleted) {
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = "已完成",
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+        
+        // 任务内容
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 12.dp)
+        ) {
+            Text(
+                text = task.title,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                color = if (task.isCompleted) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+                maxLines = 1
+            )
+            if (task.description.isNotBlank()) {
+                Text(
+                    text = task.description,
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+            }
+            Text(
+                text = "创建时间: ${dateFormat.format(task.createTime)}",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        
+        // 优先级标签
+        Box(
+            modifier = Modifier
+                .padding(4.dp)
+                .background(
+                    when (task.priority) {
+                        3 -> MaterialTheme.colorScheme.errorContainer
+                        2 -> MaterialTheme.colorScheme.surfaceVariant
+                        else -> MaterialTheme.colorScheme.surfaceVariant
+                    }
+                )
+                .clip(RoundedCornerShape(4.dp))
+                .padding(4.dp)
+        ) {
+            Text(
+                text = when (task.priority) {
+                    3 -> "高"
+                    2 -> "中"
+                    else -> "低"
+                },
+                fontSize = 10.sp,
+                color = when (task.priority) {
+                    3 -> MaterialTheme.colorScheme.onErrorContainer
+                    2 -> MaterialTheme.colorScheme.onSurfaceVariant
+                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            )
+        }
+        
+        // 删除按钮
+        IconButton(onClick = onDelete) {
+            Icon(
+                imageVector = Icons.Filled.Delete,
+                contentDescription = "删除任务",
+                tint = MaterialTheme.colorScheme.error
+            )
+        }
+    }
+    Spacer(modifier = Modifier.height(1.dp).background(MaterialTheme.colorScheme.surfaceVariant))
 }
 
 /**

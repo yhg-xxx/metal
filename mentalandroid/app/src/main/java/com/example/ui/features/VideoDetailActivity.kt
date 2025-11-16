@@ -58,7 +58,6 @@ class VideoDetailActivity : AppCompatActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // 直接调用内部的Composable函数，传入ExoPlayer实例
                     VideoDetailContent()
                 }
             }

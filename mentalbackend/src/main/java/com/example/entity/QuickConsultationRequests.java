@@ -4,14 +4,19 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
+
+import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
  * 快速咨询申请表
  */
+@Data
 @TableName("quick_consultation_requests")
 public class QuickConsultationRequests implements Serializable {
+    @Serial
     private static final long serialVersionUID = 1L;
 
     @TableId(value = "id", type = IdType.AUTO)
@@ -44,84 +49,4 @@ public class QuickConsultationRequests implements Serializable {
     @TableField("matched_time")
     private LocalDateTime matchedTime;
 
-    // getter and setter methods
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Long getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
-
-    public String getProblemDescription() {
-        return problemDescription;
-    }
-
-    public void setProblemDescription(String problemDescription) {
-        this.problemDescription = problemDescription;
-    }
-
-    public String getProblemDuration() {
-        return problemDuration;
-    }
-
-    public void setProblemDuration(String problemDuration) {
-        this.problemDuration = problemDuration;
-    }
-
-    public String getPreferredMethod() {
-        return preferredMethod;
-    }
-
-    public void setPreferredMethod(String preferredMethod) {
-        this.preferredMethod = preferredMethod;
-    }
-
-    public String getAttachedImages() {
-        return attachedImages;
-    }
-
-    public void setAttachedImages(String attachedImages) {
-        this.attachedImages = attachedImages;
-    }
-
-    public Long getMatchedCounselorId() {
-        return matchedCounselorId;
-    }
-
-    public void setMatchedCounselorId(Long matchedCounselorId) {
-        this.matchedCounselorId = matchedCounselorId;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public LocalDateTime getCreatedTime() {
-        return createdTime;
-    }
-
-    public void setCreatedTime(LocalDateTime createdTime) {
-        this.createdTime = createdTime;
-    }
-
-    public LocalDateTime getMatchedTime() {
-        return matchedTime;
-    }
-
-    public void setMatchedTime(LocalDateTime matchedTime) {
-        this.matchedTime = matchedTime;
-    }
 }

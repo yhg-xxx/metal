@@ -3,11 +3,10 @@ package com.example.controller;
 import com.example.dto.CounselorDTO;
 import com.example.entity.QuickConsultationRequests;
 import com.example.service.QuickConsultationRequestsService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.example.utils.Result;
 import jakarta.annotation.Resource;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -29,8 +27,7 @@ public class QuickConsultationController {
     @Resource
     private QuickConsultationRequestsService quickConsultationRequestsService;
 
-    @Resource
-    private ObjectMapper objectMapper;
+
 
     @Resource
     private FileUploadController fileUploadController;
@@ -41,26 +38,16 @@ public class QuickConsultationController {
      * 返回matched_counselor_id=counselorId的所有CounselorDTO数据
      */
     @GetMapping("/matched-counselors")
-    public ResponseEntity<Map<String, Object>> getMatchedCounselorsByUserId(@RequestParam("useId") Long useId) {
-        Map<String, Object> result = new HashMap<>();
-        
+    public Result getMatchedCounselorsByUserId(@RequestParam("useId") Long useId) {
         try {
             if (useId == null) {
-                result.put("code", 400);
-                result.put("msg", "用户ID不能为空");
-                return ResponseEntity.badRequest().body(result);
+                return Result.error(400, "用户ID不能为空");
             }
             
             List<CounselorDTO> counselorDTOList = quickConsultationRequestsService.getMatchedCounselorsByUserId(useId);
-            
-            result.put("code", 200);
-            result.put("msg", "查询成功");
-            result.put("data", counselorDTOList);
-            return ResponseEntity.ok(result);
+            return Result.success("查询成功", counselorDTOList);
         } catch (Exception e) {
-            result.put("code", 500);
-            result.put("msg", "查询失败: " + e.getMessage());
-            return ResponseEntity.status(500).body(result);
+            return Result.error("查询失败: " + e.getMessage());
         }
     }
 
@@ -70,38 +57,28 @@ public class QuickConsultationController {
      * 状态默认为PENDING，创建时间为当前时间
      */
     @PostMapping
-    public ResponseEntity<Map<String, Object>> addQuickConsultationRequest(
+    public Result addQuickConsultationRequest(
             @RequestParam("userId") Long userId,
             @RequestParam("problemDescription") String problemDescription,
             @RequestParam("problemDuration") String problemDuration,
             @RequestParam("preferredMethod") String preferredMethod,
             @RequestParam(value = "files", required = false) MultipartFile[] files) {
-        Map<String, Object> result = new HashMap<>();
-
         try {
             // 验证必填字段
             if (userId == null) {
-                result.put("code", 400);
-                result.put("msg", "用户ID不能为空");
-                return ResponseEntity.badRequest().body(result);
+                return Result.error(400, "用户ID不能为空");
             }
 
             if (problemDescription == null || problemDescription.isEmpty()) {
-                result.put("code", 400);
-                result.put("msg", "问题描述不能为空");
-                return ResponseEntity.badRequest().body(result);
+                return Result.error(400, "问题描述不能为空");
             }
 
             if (problemDuration == null || problemDuration.isEmpty()) {
-                result.put("code", 400);
-                result.put("msg", "问题持续时间不能为空");
-                return ResponseEntity.badRequest().body(result);
+                return Result.error(400, "问题持续时间不能为空");
             }
 
             if (preferredMethod == null || preferredMethod.isEmpty()) {
-                result.put("code", 400);
-                result.put("msg", "偏好咨询方式不能为空");
-                return ResponseEntity.badRequest().body(result);
+                return Result.error(400, "偏好咨询方式不能为空");
             }
 
             // 创建快速咨询申请对象
@@ -118,22 +95,22 @@ public class QuickConsultationController {
                 for (MultipartFile file : files) {
                     if (!file.isEmpty()) {
                         // 1. 上传图片文件
-                        ResponseEntity<Map<String, Object>> uploadResult = fileUploadController.uploadFile(file);
-                        if (uploadResult.getStatusCode().is2xxSuccessful() && 
-                            uploadResult.getBody() != null && 
-                            uploadResult.getBody().containsKey("url")) {
+                        Result uploadResult = Result.success(fileUploadController.uploadFile(file));
+                        if (uploadResult.getCode() == 200 && 
+                            uploadResult.getData() instanceof Map && 
+                            ((Map<?, ?>)uploadResult.getData()).containsKey("url")) {
                             
-                            String imageUrl = (String) uploadResult.getBody().get("url");
+                            String imageUrl = (String) ((Map<?, ?>)uploadResult.getData()).get("url");
                             
                             // 2. 识别图片中的文字
                             String recognizedText = "";
                             try {
-                                ResponseEntity<Map<String, Object>> ocrResult = fileUploadController.recognizeText(file);
-                                if (ocrResult.getStatusCode().is2xxSuccessful() && 
-                                    ocrResult.getBody() != null && 
-                                    ocrResult.getBody().containsKey("data")) {
+                                Result ocrResult = Result.success(fileUploadController.recognizeText(file));
+                                if (ocrResult.getCode() == 200 && 
+                                    ocrResult.getData() instanceof Map && 
+                                    ((Map<?, ?>)ocrResult.getData()).containsKey("data")) {
                                     
-                                    Map<String, Object> ocrData = (Map<String, Object>) ocrResult.getBody().get("data");
+                                    Map<String, Object> ocrData = (Map<String, Object>) ((Map<?, ?>)ocrResult.getData()).get("data");
                                     if (ocrData.containsKey("words_result")) {
                                         List<Map<String, String>> wordsResult = (List<Map<String, String>>) ocrData.get("words_result");
                                         StringBuilder textBuilder = new StringBuilder();
@@ -174,20 +151,13 @@ public class QuickConsultationController {
                 // 重新获取更新后的申请信息
                 QuickConsultationRequests updatedRequest = quickConsultationRequestsService.getById(request.getId());
                 
-                result.put("code", 200);
-                result.put("msg", matched ? "申请成功并匹配到咨询师" : "申请成功，正在为您匹配咨询师");
-                result.put("data", updatedRequest);
-                return ResponseEntity.ok(result);
+                return Result.success(matched ? "申请成功并匹配到咨询师" : "申请成功，正在为您匹配咨询师", updatedRequest);
             } else {
-                result.put("code", 500);
-                result.put("msg", "快速咨询申请添加失败");
-                return ResponseEntity.status(500).body(result);
+                return Result.error(500, "快速咨询申请添加失败");
             }
 
         } catch (Exception e) {
-            result.put("code", 500);
-            result.put("msg", "快速咨询申请添加失败: " + e.getMessage());
-            return ResponseEntity.status(500).body(result);
+            return Result.error("快速咨询申请添加失败: " + e.getMessage());
         }
     }
 }

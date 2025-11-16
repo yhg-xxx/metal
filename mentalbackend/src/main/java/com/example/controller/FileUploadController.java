@@ -35,8 +35,7 @@ public class FileUploadController {
 
     @GetMapping("/download/{fileName}")
     public void download(@PathVariable String fileName, HttpServletResponse response) throws IOException {
-        String filePath = UPLOAD_ROOT;
-        String realPath = filePath + fileName;
+        String realPath = UPLOAD_ROOT + fileName;
 
         if (!FileUtil.exist(realPath)) {
             response.sendError(HttpServletResponse.SC_NOT_FOUND, "文件不存在");

@@ -55,4 +55,9 @@ object RetrofitClient {
     val apiService: ApiService by lazy {
         retrofit.create(ApiService::class.java)
     }
+    
+    // 获取ChildApiService实例
+    fun getChildApiService(): ChildApiService {
+        return retrofit.create(ChildApiService::class.java)
+    }
 }

@@ -5,14 +5,21 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import com.example.model.Task
 import com.example.model.User
+import androidx.core.database.sqlite.transaction
+import java.text.SimpleDateFormat
+import java.util.*
 
 class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
         private const val DATABASE_NAME = "mental_health.db"
-        private const val DATABASE_VERSION = 2
+        private const val DATABASE_VERSION = 3 // 升级数据库版本以支持任务表
         private const val TABLE_USER = "user"
+        private const val TABLE_TASK = "task"
+        
+        // 用户表列名
         private const val COLUMN_ID = "id"
         private const val COLUMN_USERNAME = "username"
         private const val COLUMN_PHONE = "phone"
@@ -26,9 +33,23 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         private const val COLUMN_CREATED_TIME = "created_time"
         private const val COLUMN_UPDATED_TIME = "updated_time"
         private const val COLUMN_IS_LOGIN = "is_login"
+        
+        // 任务表列名
+        private const val TASK_COLUMN_ID = "id"
+        private const val TASK_COLUMN_TITLE = "title"
+        private const val TASK_COLUMN_DESCRIPTION = "description"
+        private const val TASK_COLUMN_IS_COMPLETED = "is_completed"
+        private const val TASK_COLUMN_PRIORITY = "priority"
+        private const val TASK_COLUMN_CREATE_TIME = "create_time"
+        private const val TASK_COLUMN_REMINDER_COUNT = "reminder_count"
+        private const val TASK_COLUMN_LAST_REMINDER_DATE = "last_reminder_date"
+        
+        // 日期格式化
+        private val DATE_FORMAT = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
     }
 
     override fun onCreate(db: SQLiteDatabase?) {
+        // 创建用户表
         val CREATE_USER_TABLE = (
             "CREATE TABLE $TABLE_USER ("
             + "$COLUMN_ID INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -49,13 +70,46 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
             + "UNIQUE($COLUMN_EMAIL))"
         )
         db?.execSQL(CREATE_USER_TABLE)
+        
+        // 创建任务表
+        val CREATE_TASK_TABLE = (
+            "CREATE TABLE $TABLE_TASK ("
+            + "$TASK_COLUMN_ID INTEGER PRIMARY KEY AUTOINCREMENT,"
+            + "$TASK_COLUMN_TITLE TEXT NOT NULL,"
+            + "$TASK_COLUMN_DESCRIPTION TEXT,"
+            + "$TASK_COLUMN_IS_COMPLETED INTEGER DEFAULT 0,"
+            + "$TASK_COLUMN_PRIORITY INTEGER DEFAULT 1,"
+            + "$TASK_COLUMN_CREATE_TIME TEXT DEFAULT CURRENT_TIMESTAMP,"
+            + "$TASK_COLUMN_REMINDER_COUNT INTEGER DEFAULT 0,"
+            + "$TASK_COLUMN_LAST_REMINDER_DATE TEXT"
+            + ")"
+        )
+        db?.execSQL(CREATE_TASK_TABLE)
     }
 
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
-        // 简单处理：删除旧表并创建新表
-        // 实际应用中可能需要更复杂的数据迁移策略
-        db?.execSQL("DROP TABLE IF EXISTS $TABLE_USER")
-        onCreate(db)
+        // 如果是从版本2升级到版本3，只添加任务表而不删除用户表
+        if (oldVersion < 3) {
+            val CREATE_TASK_TABLE = (
+                "CREATE TABLE $TABLE_TASK ("
+                + "$TASK_COLUMN_ID INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + "$TASK_COLUMN_TITLE TEXT NOT NULL,"
+                + "$TASK_COLUMN_DESCRIPTION TEXT,"
+                + "$TASK_COLUMN_IS_COMPLETED INTEGER DEFAULT 0,"
+                + "$TASK_COLUMN_PRIORITY INTEGER DEFAULT 1,"
+                + "$TASK_COLUMN_CREATE_TIME TEXT DEFAULT CURRENT_TIMESTAMP,"
+                + "$TASK_COLUMN_REMINDER_COUNT INTEGER DEFAULT 0,"
+                + "$TASK_COLUMN_LAST_REMINDER_DATE TEXT"
+                + ")"
+            )
+            db?.execSQL(CREATE_TASK_TABLE)
+        } else {
+            // 简单处理：删除旧表并创建新表
+            // 实际应用中可能需要更复杂的数据迁移策略
+            db?.execSQL("DROP TABLE IF EXISTS $TABLE_USER")
+            db?.execSQL("DROP TABLE IF EXISTS $TABLE_TASK")
+            onCreate(db)
+        }
     }
 
     // 添加或更新用户
@@ -63,57 +117,69 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         val db = this.writableDatabase
         
         // 开始事务
-        db.beginTransaction()
-        try {
-            // 如果用户要登录，先将所有其他用户的is_login设置为0
-            if (user.isLogin) {
-                val logoutContentValues = ContentValues()
-                logoutContentValues.put(COLUMN_IS_LOGIN, 0)
-                db.update(TABLE_USER, logoutContentValues, null, null)
-            }
-            
-            val contentValues = ContentValues()
-            contentValues.put(COLUMN_USERNAME, user.username)
-            contentValues.put(COLUMN_PHONE, user.phone)
-            contentValues.put(COLUMN_PASSWORD, user.password)
-            contentValues.put(COLUMN_EMAIL, user.email ?: "")
-            contentValues.put(COLUMN_NICKNAME, user.nickname ?: "")
-            contentValues.put(COLUMN_AVATAR_URL, user.avatarUrl ?: "")
-            contentValues.put(COLUMN_GENDER, user.gender)
-            contentValues.put(COLUMN_AGE, user.age)
-            contentValues.put(COLUMN_STATUS, user.status)
-            contentValues.put(COLUMN_CREATED_TIME, user.createdTime ?: "")
-            contentValues.put(COLUMN_UPDATED_TIME, user.updatedTime ?: "")
-            contentValues.put(COLUMN_IS_LOGIN, if (user.isLogin) 1 else 0)
-            
-            // 同步远程数据库的ID到本地数据库，但只有当远程ID不为0时才更新
-            if (user.id > 0) {
-                contentValues.put(COLUMN_ID, user.id)
-            }
+        db.transaction() {
+            try {
+                // 如果用户要登录，先将所有其他用户的is_login设置为0
+                if (user.isLogin) {
+                    val logoutContentValues = ContentValues()
+                    logoutContentValues.put(COLUMN_IS_LOGIN, 0)
+                    update(TABLE_USER, logoutContentValues, null, null)
+                }
 
-            // 先检查手机号是否已存在
-            val cursor = db.query(TABLE_USER, arrayOf(COLUMN_ID), "$COLUMN_PHONE = ?", arrayOf(user.phone), null, null, null)
-            val userId = if (cursor.moveToFirst()) {
-                cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_ID))
-            } else {
-                0
-            }
-            cursor.close()
+                val contentValues = ContentValues()
+                contentValues.put(COLUMN_USERNAME, user.username)
+                contentValues.put(COLUMN_PHONE, user.phone)
+                contentValues.put(COLUMN_PASSWORD, user.password)
+                contentValues.put(COLUMN_EMAIL, user.email ?: "")
+                contentValues.put(COLUMN_NICKNAME, user.nickname ?: "")
+                contentValues.put(COLUMN_AVATAR_URL, user.avatarUrl ?: "")
+                contentValues.put(COLUMN_GENDER, user.gender)
+                contentValues.put(COLUMN_AGE, user.age)
+                contentValues.put(COLUMN_STATUS, user.status)
+                contentValues.put(COLUMN_CREATED_TIME, user.createdTime ?: "")
+                contentValues.put(COLUMN_UPDATED_TIME, user.updatedTime ?: "")
+                contentValues.put(COLUMN_IS_LOGIN, if (user.isLogin) 1 else 0)
 
-            val result = if (userId > 0) {
-                // 更新现有用户
-                db.update(TABLE_USER, contentValues, "$COLUMN_ID = ?", arrayOf(userId.toString())).toLong()
-            } else {
-                // 添加新用户
-                db.insert(TABLE_USER, null, contentValues)
+                // 同步远程数据库的ID到本地数据库，但只有当远程ID不为0时才更新
+                if (user.id > 0) {
+                    contentValues.put(COLUMN_ID, user.id)
+                }
+
+                // 先检查手机号是否已存在
+                val cursor = query(
+                    TABLE_USER,
+                    arrayOf(COLUMN_ID),
+                    "$COLUMN_PHONE = ?",
+                    arrayOf(user.phone),
+                    null,
+                    null,
+                    null
+                )
+                val userId = if (cursor.moveToFirst()) {
+                    cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_ID))
+                } else {
+                    0
+                }
+                cursor.close()
+
+                val result = if (userId > 0) {
+                    // 更新现有用户
+                    update(
+                        TABLE_USER,
+                        contentValues,
+                        "$COLUMN_ID = ?",
+                        arrayOf(userId.toString())
+                    ).toLong()
+                } else {
+                    // 添加新用户
+                    insert(TABLE_USER, null, contentValues)
+                }
+
+                // 提交事务
+                return result
+            } finally {
+                // 结束事务
             }
-            
-            // 提交事务
-            db.setTransactionSuccessful()
-            return result
-        } finally {
-            // 结束事务
-            db.endTransaction()
         }
     }
 
@@ -276,5 +342,134 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
             }
         }
         return null
+    }
+    
+    // ===== 任务相关操作方法 =====
+    
+    // 添加任务
+    fun addTask(task: Task): Long {
+        val db = this.writableDatabase
+        val contentValues = ContentValues()
+        
+        contentValues.put(TASK_COLUMN_TITLE, task.title)
+        contentValues.put(TASK_COLUMN_DESCRIPTION, task.description)
+        contentValues.put(TASK_COLUMN_IS_COMPLETED, if (task.isCompleted) 1 else 0)
+        contentValues.put(TASK_COLUMN_PRIORITY, task.priority)
+        contentValues.put(TASK_COLUMN_CREATE_TIME, DATE_FORMAT.format(task.createTime))
+        contentValues.put(TASK_COLUMN_REMINDER_COUNT, task.reminderCount)
+        task.lastReminderDate?.let {
+            contentValues.put(TASK_COLUMN_LAST_REMINDER_DATE, DATE_FORMAT.format(it))
+        }
+        
+        return db.insert(TABLE_TASK, null, contentValues)
+    }
+    
+    // 更新任务
+    fun updateTask(task: Task): Int {
+        val db = this.writableDatabase
+        val contentValues = ContentValues()
+        
+        contentValues.put(TASK_COLUMN_TITLE, task.title)
+        contentValues.put(TASK_COLUMN_DESCRIPTION, task.description)
+        contentValues.put(TASK_COLUMN_IS_COMPLETED, if (task.isCompleted) 1 else 0)
+        contentValues.put(TASK_COLUMN_PRIORITY, task.priority)
+        contentValues.put(TASK_COLUMN_REMINDER_COUNT, task.reminderCount)
+        task.lastReminderDate?.let {
+            contentValues.put(TASK_COLUMN_LAST_REMINDER_DATE, DATE_FORMAT.format(it))
+        }
+        
+        return db.update(TABLE_TASK, contentValues, "$TASK_COLUMN_ID = ?", arrayOf(task.id.toString()))
+    }
+    
+    // 删除任务
+    fun deleteTask(taskId: Int): Int {
+        val db = this.writableDatabase
+        return db.delete(TABLE_TASK, "$TASK_COLUMN_ID = ?", arrayOf(taskId.toString()))
+    }
+    
+    // 获取所有任务
+    fun getAllTasks(): List<Task> {
+        val tasks = mutableListOf<Task>()
+        val db = this.readableDatabase
+        val cursor = db.rawQuery("SELECT * FROM $TABLE_TASK ORDER BY $TASK_COLUMN_CREATE_TIME DESC", null)
+        
+        cursor.use {
+            while (it.moveToNext()) {
+                tasks.add(cursorToTask(it))
+            }
+        }
+        return tasks
+    }
+    
+    // 根据ID获取任务
+    fun getTaskById(taskId: Int): Task? {
+        val db = this.readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT * FROM $TABLE_TASK WHERE $TASK_COLUMN_ID = ?",
+            arrayOf(taskId.toString())
+        )
+        
+        cursor.use {
+            if (it.moveToFirst()) {
+                return cursorToTask(it)
+            }
+        }
+        return null
+    }
+    
+    // 获取未完成的任务
+    fun getIncompleteTasks(): List<Task> {
+        val tasks = mutableListOf<Task>()
+        val db = this.readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT * FROM $TABLE_TASK WHERE $TASK_COLUMN_IS_COMPLETED = 0 ORDER BY $TASK_COLUMN_PRIORITY DESC, $TASK_COLUMN_CREATE_TIME ASC",
+            null
+        )
+        
+        cursor.use {
+            while (it.moveToNext()) {
+                tasks.add(cursorToTask(it))
+            }
+        }
+        return tasks
+    }
+    
+    // 将游标转换为Task对象
+    private fun cursorToTask(cursor: Cursor): Task {
+        val id = cursor.getInt(cursor.getColumnIndexOrThrow(TASK_COLUMN_ID))
+        val title = cursor.getString(cursor.getColumnIndexOrThrow(TASK_COLUMN_TITLE))
+        val description = cursor.getString(cursor.getColumnIndexOrThrow(TASK_COLUMN_DESCRIPTION))
+        val isCompleted = cursor.getInt(cursor.getColumnIndexOrThrow(TASK_COLUMN_IS_COMPLETED)) == 1
+        val priority = cursor.getInt(cursor.getColumnIndexOrThrow(TASK_COLUMN_PRIORITY))
+        val createTimeStr = cursor.getString(cursor.getColumnIndexOrThrow(TASK_COLUMN_CREATE_TIME))
+        val reminderCount = cursor.getInt(cursor.getColumnIndexOrThrow(TASK_COLUMN_REMINDER_COUNT))
+        
+        val createTime = try {
+            DATE_FORMAT.parse(createTimeStr) ?: Date()
+        } catch (e: Exception) {
+            Date()
+        }
+        
+        val lastReminderDateStr = cursor.getString(cursor.getColumnIndexOrThrow(TASK_COLUMN_LAST_REMINDER_DATE))
+        val lastReminderDate = if (lastReminderDateStr != null && lastReminderDateStr.isNotEmpty()) {
+            try {
+                DATE_FORMAT.parse(lastReminderDateStr)
+            } catch (e: Exception) {
+                null
+            }
+        } else {
+            null
+        }
+        
+        return Task(
+            id = id,
+            title = title,
+            description = description,
+            isCompleted = isCompleted,
+            priority = priority,
+            createTime = createTime,
+            reminderCount = reminderCount,
+            lastReminderDate = lastReminderDate
+        )
     }
 }

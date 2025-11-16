@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.R
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -97,6 +98,7 @@ object ImageLoadingUtils {
      * @param processedUrl 处理后的图片URL
      * @param resultCallback 结果回调函数
      */
+    @OptIn(DelicateCoroutinesApi::class)
     fun performImageLoadingTest(
         context: Context,
         originalUrl: String?,

@@ -15,6 +15,11 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
     
+    <!-- 任务提醒所需权限 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    
     <!-- 声明电话功能为可选，解决Chrome OS兼容性问题 -->
     <uses-feature android:name="android.hardware.telephony" android:required="false"/>
     <!-- 声明相机和麦克风为可选，增加应用兼容性 -->
@@ -96,6 +101,21 @@
             android:theme="@style/Theme.Mental"
             android:screenOrientation="fullSensor"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout" />
+        
+        <activity
+            android:name=".ui.features.ChildInfoScreenActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Mental" />
+        
+        <!-- 任务提醒广播接收器 -->
+        <receiver
+            android:name=".util.TaskReminderService$TaskReminderReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="com.example.TASK_REMINDER" />
+            </intent-filter>
+        </receiver>
 
     </application>
 

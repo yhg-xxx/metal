@@ -2,15 +2,14 @@ package com.example.controller;
 
 import com.example.entity.Users;
 import com.example.service.UsersService;
+import com.example.utils.Result;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
-import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -35,18 +34,14 @@ public class UsersController {
      * 只有电话号码是必填的，其他字段可选填
      */
     @PostMapping
-    public ResponseEntity<Map<String, Object>> createUser(
+    public Result createUser(
             @RequestPart(value = "user", required = false) String userJson,
             @RequestPart(value = "avatar", required = false) MultipartFile avatar) {
-
-        Map<String, Object> result = new HashMap<>();
 
         try {
             // 如果没有用户JSON数据，返回错误
             if (userJson == null || userJson.isEmpty()) {
-                result.put("code", 400);
-                result.put("msg", "用户信息不能为空");
-                return ResponseEntity.badRequest().body(result);
+                return Result.error(400, "用户信息不能为空");
             }
 
             // 解析用户JSON数据
@@ -54,20 +49,18 @@ public class UsersController {
             
             // 检查电话号码是否存在
             if (user.getPhone() == null || user.getPhone().isEmpty()) {
-                result.put("code", 400);
-                result.put("msg", "电话号码不能为空");
-                return ResponseEntity.badRequest().body(result);
+                return Result.error(400, "电话号码不能为空");
             }
 
             // 如果上传了头像，处理头像文件
             if (avatar != null && !avatar.isEmpty()) {
                 // 使用现有的文件上传控制器上传头像
-                ResponseEntity<Map<String, Object>> uploadResult = fileUploadController.uploadFile(avatar);
-                if (uploadResult.getStatusCode().is2xxSuccessful() && 
-                    uploadResult.getBody() != null && 
-                    uploadResult.getBody().containsKey("url")) {
+                Result uploadResult = Result.success(fileUploadController.uploadFile(avatar));
+                if (uploadResult.getCode() == 200 && 
+                    uploadResult.getData() instanceof Map && 
+                    ((Map<?, ?>)uploadResult.getData()).containsKey("url")) {
                     // 设置用户头像URL
-                    user.setAvatarUrl((String) uploadResult.getBody().get("url"));
+                    user.setAvatarUrl((String) ((Map<?, ?>)uploadResult.getData()).get("url"));
                 }
             }
 
@@ -80,20 +73,13 @@ public class UsersController {
             // 保存用户信息
             boolean saved = usersService.save(user);
             if (saved) {
-                result.put("code", 200);
-                result.put("msg", "success");
-                result.put("data", user);
-                return ResponseEntity.ok(result);
+                return Result.success("success", user);
             } else {
-                result.put("code", 500);
-                result.put("msg", "用户创建失败");
-                return ResponseEntity.status(500).body(result);
+                return Result.error(500, "用户创建失败");
             }
 
         } catch (Exception e) {
-            result.put("code", 500);
-            result.put("msg", "用户创建失败: " + e.getMessage());
-            return ResponseEntity.status(500).body(result);
+            return Result.error("用户创建失败: " + e.getMessage());
         }
     }
 
@@ -103,19 +89,15 @@ public class UsersController {
      * 通过电话号码识别用户
      */
     @PutMapping
-    public ResponseEntity<Map<String, Object>> updateUser(
+    public Result updateUser(
             @RequestParam("phone") String phone,
             @RequestPart(value = "user", required = false) String userJson,
             @RequestPart(value = "avatar", required = false) MultipartFile avatar) {
 
-        Map<String, Object> result = new HashMap<>();
-
         try {
             // 检查电话号码是否存在
             if (phone == null || phone.isEmpty()) {
-                result.put("code", 400);
-                result.put("msg", "电话号码不能为空");
-                return ResponseEntity.badRequest().body(result);
+                return Result.error(400, "电话号码不能为空");
             }
             
             // 检查用户是否存在
@@ -123,9 +105,7 @@ public class UsersController {
                     .eq(Users::getPhone, phone)
                     .one();
             if (existingUser == null) {
-                result.put("code", 404);
-                result.put("msg", "用户不存在");
-                return ResponseEntity.notFound().build();
+                return Result.error(404, "用户不存在");
             }
 
             // 如果有用户JSON数据，更新用户信息
@@ -152,32 +132,25 @@ public class UsersController {
             // 如果上传了新的头像，处理头像文件
             if (avatar != null && !avatar.isEmpty()) {
                 // 使用现有的文件上传控制器上传头像
-                ResponseEntity<Map<String, Object>> uploadResult = fileUploadController.uploadFile(avatar);
-                if (uploadResult.getStatusCode().is2xxSuccessful() && 
-                    uploadResult.getBody() != null && 
-                    uploadResult.getBody().containsKey("url")) {
+                Result uploadResult = Result.success(fileUploadController.uploadFile(avatar));
+                if (uploadResult.getCode() == 200 && 
+                    uploadResult.getData() instanceof Map && 
+                    ((Map<?, ?>)uploadResult.getData()).containsKey("url")) {
                     // 更新用户头像URL
-                    existingUser.setAvatarUrl((String) uploadResult.getBody().get("url"));
+                    existingUser.setAvatarUrl((String) ((Map<?, ?>)uploadResult.getData()).get("url"));
                 }
             }
 
             // 保存更新后的用户信息
             boolean updated = usersService.updateById(existingUser);
             if (updated) {
-                result.put("code", 200);
-                result.put("msg", "success");
-                result.put("data", existingUser);
-                return ResponseEntity.ok(result);
+                return Result.success("success", existingUser);
             } else {
-                result.put("code", 500);
-                result.put("msg", "用户更新失败");
-                return ResponseEntity.status(500).body(result);
+                return Result.error(500, "用户更新失败");
             }
 
         } catch (Exception e) {
-            result.put("code", 500);
-            result.put("msg", "用户更新失败: " + e.getMessage());
-            return ResponseEntity.status(500).body(result);
+            return Result.error("用户更新失败: " + e.getMessage());
         }
     }
 }

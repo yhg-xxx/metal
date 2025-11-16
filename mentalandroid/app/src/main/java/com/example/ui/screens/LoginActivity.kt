@@ -1,12 +1,15 @@
 package com.example.ui.screens
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.telephony.TelephonyManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -47,6 +50,7 @@ import com.example.ui.theme.MentalTheme
 import com.example.util.DatabaseHelper
 import com.example.util.IpAddressManager
 import coil.compose.AsyncImage
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -62,6 +66,7 @@ class LoginActivity : ComponentActivity() {
     private var allUserPhones: List<String> = emptyList()
     private val apiService = RetrofitClient.apiService
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         dbHelper = DatabaseHelper(this)
@@ -102,6 +107,7 @@ class LoginActivity : ComponentActivity() {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun checkPhonePermission() {
         // 检查所有需要的权限
         val permissions = arrayOf(
@@ -125,6 +131,7 @@ class LoginActivity : ComponentActivity() {
         }
     }
 
+    @SuppressLint("HardwareIds")
     private fun getDevicePhoneNumber() {
         try {
             val telephonyManager = getSystemService(TELEPHONY_SERVICE) as TelephonyManager
@@ -147,6 +154,7 @@ class LoginActivity : ComponentActivity() {
 
 
 
+    @Deprecated("Deprecated in Java")
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -165,6 +173,7 @@ class LoginActivity : ComponentActivity() {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private fun handleOneKeyLogin(phoneNumber: String) {
         // 首先根据手机号检查用户是否存在
         val existingUser = dbHelper.getUserByPhone(phoneNumber)
@@ -272,6 +281,7 @@ class LoginActivity : ComponentActivity() {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private fun handleManualLogin(phone: String, password: String) {
         val user = dbHelper.checkUser(phone, password)
         if (user != null) {

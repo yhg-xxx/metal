@@ -272,6 +272,7 @@ fun LearningScreen(modifier: Modifier = Modifier) {
 private fun RecommendedLearningPackage(learningPackages: List<LearningPackage>?) {
     // 获取学习包数据的第一条（如果有）
     val recommendedPackage = learningPackages?.firstOrNull()
+    val context = LocalContext.current
     
     if (recommendedPackage != null) {
         // 使用学习包的description作为推荐原因
@@ -281,9 +282,9 @@ private fun RecommendedLearningPackage(learningPackages: List<LearningPackage>?)
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
+                .clip(RoundedCornerShape(16.dp))
                 .background(Color.White)
-                .clip(RoundedCornerShape(10.dp))
-//                .clickable { recommendedPackage.let { navigateToVideoDetail(savedContext, it) } }
+                .clickable { navigateToVideoDetail(context, recommendedPackage) }
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
@@ -355,8 +356,8 @@ private fun RecommendedLearningPackage(learningPackages: List<LearningPackage>?)
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .height(120.dp)
-                .background(Color.White)
                 .clip(RoundedCornerShape(10.dp))
+                .background(Color.White)
                 .padding(16.dp)
         ) {
             Text(
