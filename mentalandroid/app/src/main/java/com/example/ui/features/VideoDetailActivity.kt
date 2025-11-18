@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -30,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import android.widget.MediaController
 import android.widget.VideoView
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import coil.compose.AsyncImage
 import com.example.model.LearningVideo
 import com.example.network.RetrofitClient
@@ -118,7 +118,7 @@ class VideoDetailActivity : AppCompatActivity() {
                             selectedVideo = response.data[0]
                         }
                     } else {
-                        errorMessage = "获取视频列表失败: ${response.msg}"
+                        errorMessage = "获取视频列表失败: ${response.message}"
                         Timber.tag("VideoDetailScreen").e(errorMessage.toString())
                     }
                 } catch (e: Exception) {
@@ -163,7 +163,7 @@ class VideoDetailActivity : AppCompatActivity() {
                     navigationIcon = {
                         IconButton(onClick = { finish() }) {
                             Icon(
-                                imageVector = Icons.Filled.ArrowBack,
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "返回",
                                 tint = MaterialTheme.colorScheme.onPrimary
                             )
@@ -282,7 +282,7 @@ class VideoDetailActivity : AppCompatActivity() {
                                                 val field = VideoView::class.java.getDeclaredField("mUri")
                                                 field.isAccessible = true
                                                 field.get(vv) as Uri?
-                                            } catch (e: Exception) {
+                                            } catch (_: Exception) {
                                                 null
                                             }
                                         }

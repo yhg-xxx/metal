@@ -26,6 +26,7 @@ import com.example.ui.screens.MessageScreen
 import com.example.ui.screens.ProfileScreen
 import com.example.ui.theme.MentalTheme
 
+@Suppress("DEPRECATION")
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,10 +52,8 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         // 让布局可以全屏，延展到状态栏里
-        WindowCompat.getInsetsController(window, window.decorView).let { controller ->
-            // 设置状态栏图标为浅色（白色），与详情页保持一致
-            controller.isAppearanceLightStatusBars = false
-        }
+        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars =
+            false
 
         // 设置状态栏颜色为透明
         window.statusBarColor = android.graphics.Color.TRANSPARENT

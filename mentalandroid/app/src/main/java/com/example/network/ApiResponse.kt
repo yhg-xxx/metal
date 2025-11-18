@@ -16,7 +16,7 @@ data class ApiResponse<T>(
     /**
      * 响应消息
      */
-    @SerializedName("msg")
+    @SerializedName("message")
     val message: String,
     
     /**

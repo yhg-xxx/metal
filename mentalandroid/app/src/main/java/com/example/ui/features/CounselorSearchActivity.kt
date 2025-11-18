@@ -43,9 +43,11 @@ import kotlinx.coroutines.withContext
 import timber.log.Timber
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.material3.HorizontalDivider
 import androidx.core.view.WindowCompat
 
 
+@Suppress("DEPRECATION")
 @SuppressLint("RestrictedApi")
 class CounselorSearchActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -275,7 +277,7 @@ fun CounselorSearchScreen(
                     }
                     
                     // 添加分割线
-                    Divider()
+                    HorizontalDivider()
                     
                     // 选项列表
                     LazyColumn(

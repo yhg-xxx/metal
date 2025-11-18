@@ -1,5 +1,6 @@
 package com.example.splash
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -36,6 +37,7 @@ import com.example.ui.screens.LoginActivity
 import com.example.util.DatabaseHelper
 import kotlinx.coroutines.delay
 
+@SuppressLint("CustomSplashScreen")
 class SplashActivity : ComponentActivity() {
     private lateinit var dbHelper: DatabaseHelper
     

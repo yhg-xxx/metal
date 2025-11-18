@@ -15,9 +15,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.VideoCall
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,6 +33,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.Manifest
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import coil.compose.AsyncImage
 import java.util.UUID
 import com.example.model.Message
@@ -49,13 +49,14 @@ import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.*
 
+@Suppress("DEPRECATION")
 class ChatDetailActivity : ComponentActivity() {
     companion object {
         private const val EXTRA_USER_ID = "userId"
         private const val EXTRA_COUNSELOR_ID = "counselorId"
         private const val EXTRA_COUNSELOR_NAME = "counselorName"
         private const val EXTRA_COUNSELOR_AVATAR = "counselorAvatar"
-        private const val EXTRA_USER_AVATAR = "userAvatar"
+
         
         fun start(context: Context, userId: Long, counselor: Any) {
             val intent = Intent(context, ChatDetailActivity::class.java).apply {
@@ -72,7 +73,7 @@ class ChatDetailActivity : ComponentActivity() {
                     val avatarField = counselor.javaClass.getDeclaredField("photoUrl")
                     avatarField.isAccessible = true
                     putExtra(EXTRA_COUNSELOR_AVATAR, avatarField.get(counselor) as String?)
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     // 处理异常
                 }
             }
@@ -87,11 +88,7 @@ class ChatDetailActivity : ComponentActivity() {
     )
     private val PERMISSION_REQUEST_CODE = 1001
     
-    private fun hasRequiredPermissions(): Boolean {
-        return requiredPermissions.all {
-            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
-        }
-    }
+
     
     private fun requestPermissionsIfNeeded(onPermissionsGranted: () -> Unit) {
         val missingPermissions = requiredPermissions.filter {
@@ -144,6 +141,7 @@ class ChatDetailActivity : ComponentActivity() {
         }
     }
     
+    @Deprecated("Deprecated in Java")
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -234,7 +232,7 @@ fun ChatDetailScreen(
         onDispose {
             try {
                 WebSocketManager.getInstance().disconnect()
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // 忽略断开连接时的异常
             }
         }
@@ -381,7 +379,7 @@ fun ChatDetailScreen(
                         // 解析失败，尝试直接截取
                         timestamp.substringAfter('T').substring(0, 5)
                     }
-                } catch (e: ParseException) {
+                } catch (_: ParseException) {
                     // 如果解析失败，回退到直接截取的方法
                     return timestamp.substringAfter('T').substring(0, 5)
                 }
@@ -394,7 +392,7 @@ fun ChatDetailScreen(
 
             // 如果格式不匹配，返回默认时间或空字符串
             return "--:--"
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // 如果解析失败，返回默认格式
             return "--:--"
         }
@@ -564,7 +562,7 @@ fun ChatDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackPress) {
                         Icon(
-                            imageVector = Icons.Filled.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "返回",
                             tint = MaterialTheme.colorScheme.onPrimary
                         )
@@ -698,7 +696,7 @@ fun ChatDetailScreen(
                         enabled = messageText.value.isNotBlank() && connectedState.value
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.Send,
+                            imageVector = Icons.AutoMirrored.Filled.Send,
                             contentDescription = "发送",
                             tint = if (messageText.value.isNotBlank() && connectedState.value) Color(0xFF5A67D8) else Color.Gray
                         )

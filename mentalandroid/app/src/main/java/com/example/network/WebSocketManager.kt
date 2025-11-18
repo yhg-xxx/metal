@@ -1,14 +1,14 @@
 package com.example.network
 
-import android.util.Base64
+
 import com.example.util.IpAddressManager
 import okhttp3.*
 import org.json.JSONObject
 import timber.log.Timber
-import java.security.SecureRandom
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
+@Suppress("SameParameterValue", "NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
 class WebSocketManager private constructor() {
     companion object {
         private const val TAG = "WebSocketManager"
@@ -480,16 +480,12 @@ class WebSocketManager private constructor() {
                 }
             }
             "Unknown STOMP error"
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             "Failed to parse error message"
         }
     }
 
-    private fun generateWebSocketKey(): String {
-        val bytes = ByteArray(16)
-        SecureRandom().nextBytes(bytes)
-        return Base64.encodeToString(bytes, Base64.NO_WRAP)
-    }
+
 
     // 生成唯一的通话ID
     private fun generateCallId(): String {

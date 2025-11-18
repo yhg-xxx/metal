@@ -18,11 +18,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,6 +38,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -79,7 +80,7 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
     var showAddTaskDialog by remember { mutableStateOf(false) }
     var newTaskTitle by remember { mutableStateOf("") }
     var newTaskDescription by remember { mutableStateOf("") }
-    var taskPriority by remember { mutableStateOf(1) }
+    var taskPriority by remember { mutableIntStateOf(1) }
     
     // 加载任务数据
     LaunchedEffect(Unit) {
@@ -600,7 +601,7 @@ private fun ProfileMenuItem(title: String, description: String, onClick: () -> U
             )
         }
         Icon(
-            imageVector = Icons.Filled.ArrowForward,
+            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
             contentDescription = "进入",
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )

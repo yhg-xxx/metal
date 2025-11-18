@@ -83,7 +83,7 @@ fun MessageScreen(modifier: Modifier = Modifier) {
                     if (response.code == 200 && response.data != null) {
                         counselors = response.data
                     } else {
-                        error = "获取咨询师列表失败: ${response.msg}"
+                        error = "获取咨询师列表失败: ${response.message}"
                     }
                 }
             } else {

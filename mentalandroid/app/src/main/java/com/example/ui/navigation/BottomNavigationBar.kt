@@ -2,7 +2,6 @@ package com.example.ui.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Person
 
 import androidx.compose.material.icons.filled.Book

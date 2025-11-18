@@ -100,7 +100,8 @@
             android:exported="false"
             android:theme="@style/Theme.Mental"
             android:screenOrientation="fullSensor"
-            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout" />
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout"
+            tools:ignore="DiscouragedApi" />
         
         <activity
             android:name=".ui.features.ChildInfoScreenActivity"

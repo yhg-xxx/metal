@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -59,6 +60,7 @@ import okhttp3.RequestBody
 import timber.log.Timber
 
 
+@Suppress("DEPRECATION")
 class LoginActivity : ComponentActivity() {
     private val READ_PHONE_PERMISSION = 1001
     private lateinit var dbHelper: DatabaseHelper
@@ -194,7 +196,7 @@ class LoginActivity : ComponentActivity() {
                             "email": ${if (updatedUser.email != null) "\"${updatedUser.email}\"" else "null"},
                             "nickname": ${if (updatedUser.nickname != null) "\"${updatedUser.nickname}\"" else "null"},
                             "gender": "${updatedUser.gender}",
-                            "age": ${if (updatedUser.age != null) updatedUser.age else "null"}
+                            "age": ${updatedUser.age ?: "null"}
                         }
                     """
                     
@@ -301,7 +303,7 @@ class LoginActivity : ComponentActivity() {
                             "email": ${if (updatedUser.email != null) "\"${updatedUser.email}\"" else "null"},
                             "nickname": ${if (updatedUser.nickname != null) "\"${updatedUser.nickname}\"" else "null"},
                             "gender": "${updatedUser.gender}",
-                            "age": ${if (updatedUser.age != null) updatedUser.age else "null"}
+                            "age": ${updatedUser.age ?: "null"}
                         }
                     """.trimIndent()
                     
@@ -425,14 +427,16 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // 应用图标
-            Image(
-                painter = painterResource(id = R.drawable.img),
-                contentDescription = "应用图标",
-                modifier = Modifier
-                    .size(100.dp)
-                    .background(Color(0xFF5A67D8), RoundedCornerShape(20.dp))
-                    .padding(20.dp)
-            )
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier.size(100.dp)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.title),
+                    contentDescription = "应用图标",
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
             
             Spacer(modifier = Modifier.height(40.dp))
             

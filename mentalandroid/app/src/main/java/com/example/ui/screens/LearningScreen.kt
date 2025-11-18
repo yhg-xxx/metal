@@ -96,7 +96,7 @@ fun LearningScreen(modifier: Modifier = Modifier) {
                 // 显示所有获取到的学习包数据
                 learningPackages = response.data
             } else {
-                errorMessage = "获取学习包失败: ${response.msg}"
+                errorMessage = "获取学习包失败: ${response.message}"
                 Timber.tag("LearningScreen").e(errorMessage.toString())
             }
         } catch (e: Exception) {

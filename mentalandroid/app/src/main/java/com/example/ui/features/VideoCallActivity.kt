@@ -15,7 +15,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CallEnd
-import androidx.compose.material.icons.filled.CallMissed
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
@@ -43,6 +42,8 @@ import android.os.Looper
 import androidx.compose.material.icons.automirrored.filled.CallMissed
 
 
+
+@Suppress("DEPRECATION")
 class VideoCallActivity : ComponentActivity() {
     companion object {
         const val EXTRA_USER_ID = "userId"
@@ -181,8 +182,7 @@ class VideoCallActivity : ComponentActivity() {
             rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE
             continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
             keyType = PeerConnection.KeyType.ECDSA
-            // 启用更强的兼容性设置
-            var enableDtlsSrtp = true
+
         }
 
         peerConnection = peerConnectionFactory.createPeerConnection(
@@ -988,7 +988,7 @@ fun VideoCallScreen(
 
 // 通话计时器助手类
 class CallTimer {
-    private val callDuration = mutableStateOf(0)
+    private val callDuration = mutableIntStateOf(0)
     private val handler = Handler(Looper.getMainLooper())
     private var runnable: Runnable? = null
     
@@ -1000,7 +1000,7 @@ class CallTimer {
         
         runnable = object : Runnable {
             override fun run() {
-                callDuration.value = callDuration.value + 1
+                callDuration.intValue = callDuration.intValue + 1
                 handler.postDelayed(this, 1000)
             }
         }
@@ -1262,7 +1262,7 @@ fun CallEndedView(reason: String, onConfirm: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
-            imageVector = Icons.Filled.CallMissed,
+            imageVector = Icons.AutoMirrored.Filled.CallMissed,
             contentDescription = "通话结束",
             modifier = Modifier.size(64.dp),
             tint = Color.White

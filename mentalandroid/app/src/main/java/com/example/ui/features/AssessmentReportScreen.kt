@@ -16,7 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -60,7 +60,7 @@ fun AssessmentReportScreen(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = { /* 返回按钮点击事件 */ }) {
-                Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "返回")
+                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
             }
             Spacer(modifier = Modifier.width(8.dp))
             Text(

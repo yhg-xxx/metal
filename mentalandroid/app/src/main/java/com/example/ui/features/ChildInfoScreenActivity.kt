@@ -3,25 +3,33 @@ package com.example.ui.features
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.model.Child
 import com.example.model.CreateChildRequest
@@ -70,26 +78,106 @@ fun FormItem(label: String, isRequired: Boolean = false, content: @Composable ()
             }
         }
         content()
-        Divider(modifier = Modifier.fillMaxWidth())
+        HorizontalDivider(
+            modifier = Modifier.fillMaxWidth(),
+
+        )
     }
 }
 
-// 性别选项组件
+// 性别选择组件 - 优化版
 @Composable
-fun GenderOption(text: String, isSelected: Boolean, onSelect: () -> Unit) {
+fun GenderOption(
+    text: String,
+    isSelected: Boolean,
+    onSelect: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(12.dp)
+
+    // 动态颜色
+    val selectedColor = MaterialTheme.colorScheme.primary
+    val unselectedColor = MaterialTheme.colorScheme.surfaceVariant
+    val selectedTextColor = MaterialTheme.colorScheme.onPrimary
+    val unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+    // 动画效果
+    val scale by animateFloatAsState(
+        targetValue = if (isSelected) 0.95f else 1f,
+        animationSpec = tween(durationMillis = 150)
+    )
+
+    val elevation by animateFloatAsState(
+        targetValue = if (isSelected) 4.dp.value else 2.dp.value,
+        animationSpec = tween(durationMillis = 150)
+    )
+
     Box(
-        modifier = Modifier
-            .padding(end = 16.dp)
-            .clickable { onSelect() }
+        modifier = modifier
+            .scale(scale)
+            .shadow(
+                elevation = elevation.dp,
+                shape = shape,
+                clip = false
+            )
+            .clip(shape)
     ) {
         Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp)
+            shape = shape,
+            color = if (isSelected) selectedColor else unselectedColor,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onSelect() },
+            tonalElevation = if (isSelected) 3.dp else 1.dp
         ) {
             Text(
                 text = text,
-                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (isSelected) selectedTextColor else unselectedTextColor,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .padding(vertical = 16.dp)
+                    .fillMaxWidth()
+            )
+        }
+    }
+}
+
+// 性别选择组组件
+@Composable
+fun GenderSelection(
+    selectedGender: String,
+    onGenderSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val genders = listOf("男", "女")
+
+    Column(
+        modifier = modifier.fillMaxWidth()
+    ) {
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            genders.forEach { gender ->
+                GenderOption(
+                    text = gender,
+                    isSelected = selectedGender == gender,
+                    onSelect = { onGenderSelected(gender) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        // 验证提示
+        if (selectedGender.isEmpty()) {
+            Text(
+                text = "请选择性别",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(top = 8.dp)
             )
         }
     }
@@ -120,7 +208,7 @@ fun ChildInfoScreen(
     
     // 日期选择器状态
     var showDatePicker by remember { mutableStateOf(false) }
-    var selectedDate by remember { mutableStateOf(System.currentTimeMillis()) }
+    var selectedDate by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
     // 表单字段状态
     var name by remember { mutableStateOf("") }
@@ -139,7 +227,8 @@ fun ChildInfoScreen(
     var healthStatus by remember { mutableStateOf("") }
     var healthDescription by remember { mutableStateOf("") }
     var pastIllness by remember { mutableStateOf("") }
-    var pastIllnessDescription by remember { mutableStateOf("") }
+    // 新增：自定义过往病史输入
+    var customPastIllness by remember { mutableStateOf("") }
     var fatherPhone by remember { mutableStateOf("") }
     var motherPhone by remember { mutableStateOf("") }
     var guardianPhone by remember { mutableStateOf("") }
@@ -161,7 +250,7 @@ fun ChildInfoScreen(
         healthStatus = ""
         healthDescription = ""
         pastIllness = ""
-        pastIllnessDescription = ""
+        customPastIllness = ""
         fatherPhone = ""
         motherPhone = ""
         guardianPhone = ""
@@ -183,8 +272,24 @@ fun ChildInfoScreen(
         interestActivities = child.interestActivities ?: ""
         healthStatus = child.healthStatus ?: ""
         healthDescription = child.healthDescription ?: ""
-        pastIllness = child.pastIllness ?: ""
-        pastIllnessDescription = child.pastIllnessDescription ?: ""
+        
+        // 检查是否为自定义病史（不在预设选项中的值）
+        val dbPastIllness = child.pastIllness ?: ""
+        // 预设的过往病史选项（需要和UI中的选项保持一致）
+        val standardPastIllnessOptions = listOf("NONE", "ASTHMA", "ALLERGY", "DIABETES", "HEART_DISEASE", "OTHER")
+        
+        if (standardPastIllnessOptions.contains(dbPastIllness)) {
+            // 标准选项，直接使用
+            pastIllness = dbPastIllness
+            customPastIllness = ""
+        } else if (dbPastIllness.isNotEmpty()) {
+            // 自定义输入，设置为OTHER并恢复输入内容
+            pastIllness = "OTHER"
+            customPastIllness = dbPastIllness
+        } else {
+            pastIllness = ""
+            customPastIllness = ""
+        }
         fatherPhone = child.fatherPhone ?: ""
         motherPhone = child.motherPhone ?: ""
         guardianPhone = child.guardianPhone ?: ""
@@ -280,6 +385,11 @@ fun ChildInfoScreen(
             showToast = "性别不能为空"
             return false
         }
+        // 添加健康状态验证逻辑：当选择较差(POOR)或很差(VERY_POOR)时，必须填写健康描述
+        if ((healthStatus == "POOR" || healthStatus == "VERY_POOR") && healthDescription.isBlank()) {
+            showToast = "当健康状态为'较差'或'很差'时，必须填写健康状态描述"
+            return false
+        }
         return true
     }
 
@@ -303,79 +413,93 @@ fun ChildInfoScreen(
 
             if (isAdding) {
                 // 添加新孩子
-                val request = CreateChildRequest(
-                    userId = loggedInUser.id.toLong(),
-                    name = name,
-                    gender = gender,
-                    birthYearMonth = birthYearMonth.ifEmpty { null },
-                    ethnicity = ethnicity.ifEmpty { null },
-                    currentSchool = currentSchool.ifEmpty { null },
-                    householdRegister = householdRegister.ifEmpty { null },
-                    birthOrder = birthOrder.ifEmpty { null },
-                    birthPlace = birthPlace.ifEmpty { null },
-                    languageEnvironment = languageEnvironment.ifEmpty { null },
-                    homeAddress = homeAddress.ifEmpty { null },
-                    habits = habits.ifEmpty { null },
-                    interestActivities = interestActivities.ifEmpty { null },
-                    healthStatus = healthStatus.ifEmpty { null },
-                    healthDescription = healthDescription.ifEmpty { null },
-                    pastIllness = pastIllness.ifEmpty { null },
-                    pastIllnessDescription = pastIllnessDescription.ifEmpty { null },
-                    fatherPhone = fatherPhone.ifEmpty { null },
-                    motherPhone = motherPhone.ifEmpty { null },
-                    guardianPhone = guardianPhone.ifEmpty { null }
-                )
+                    // 当过往病史选择"其他"时，将customPastIllness的值保存到pastIllness字段
+                    val finalPastIllness = if (pastIllness == "OTHER" && customPastIllness.isNotEmpty()) {
+                        customPastIllness
+                    } else {
+                        pastIllness
+                    }
+                    
+                    val request = CreateChildRequest(
+                        userId = loggedInUser.id.toLong(),
+                        name = name,
+                        gender = gender,
+                        birthYearMonth = birthYearMonth.ifEmpty { null },
+                        ethnicity = ethnicity.ifEmpty { null },
+                        currentSchool = currentSchool.ifEmpty { null },
+                        householdRegister = householdRegister.ifEmpty { null },
+                        birthOrder = birthOrder.ifEmpty { null },
+                        birthPlace = birthPlace.ifEmpty { null },
+                        languageEnvironment = languageEnvironment.ifEmpty { null },
+                        homeAddress = homeAddress.ifEmpty { null },
+                        habits = habits.ifEmpty { null },
+                        interestActivities = interestActivities.ifEmpty { null },
+                        healthStatus = healthStatus.ifEmpty { null },
+                        healthDescription = healthDescription.ifEmpty { null },
+                        pastIllness = finalPastIllness.ifEmpty { null },
+                        fatherPhone = fatherPhone.ifEmpty { null },
+                        motherPhone = motherPhone.ifEmpty { null },
+                        guardianPhone = guardianPhone.ifEmpty { null }
+                    )
 
                 val response: ApiResponse<Child> = childApiService.createChild(request)
 
-                if (response.isSuccess() && response.data != null) {
-                    // 设置为当前操作孩子
-                    childApiService.setCurrentChild(
-                        userId = loggedInUser.id.toLong(),
-                        childId = response.data.id
-                    )
-
-                    // 更新状态
-                    currentChild = response.data
+                if (response.isSuccess()) {
+                    // 如果有返回数据，则更新状态
+                    if (response.data != null) {
+                        // 设置为当前操作孩子
+                        childApiService.setCurrentChild(
+                            userId = loggedInUser.id.toLong(),
+                            childId = response.data.id
+                        )
+                    }
                     isEditing = false
                     isAdding = false
                     showToast = "孩子信息添加成功"
+                    // 自动刷新数据以显示最新信息
+                    loadChildInfo()
                 } else {
                     showToast = "添加孩子信息失败：${response.message}"
                 }
             } else {
                 // 更新孩子信息
-                val request = UpdateChildRequest(
-                    id = currentChild!!.id,
-                    name = name,
-                    gender = gender,
-                    birthYearMonth = birthYearMonth.ifEmpty { null },
-                    ethnicity = ethnicity.ifEmpty { null },
-                    currentSchool = currentSchool.ifEmpty { null },
-                    householdRegister = householdRegister.ifEmpty { null },
-                    birthOrder = birthOrder.ifEmpty { null },
-                    birthPlace = birthPlace.ifEmpty { null },
-                    languageEnvironment = languageEnvironment.ifEmpty { null },
-                    homeAddress = homeAddress.ifEmpty { null },
-                    habits = habits.ifEmpty { null },
-                    interestActivities = interestActivities.ifEmpty { null },
-                    healthStatus = healthStatus.ifEmpty { null },
-                    healthDescription = healthDescription.ifEmpty { null },
-                    pastIllness = pastIllness.ifEmpty { null },
-                    pastIllnessDescription = pastIllnessDescription.ifEmpty { null },
-                    fatherPhone = fatherPhone.ifEmpty { null },
-                    motherPhone = motherPhone.ifEmpty { null },
-                    guardianPhone = guardianPhone.ifEmpty { null }
-                )
+                    // 当过往病史选择"其他"时，将customPastIllness的值保存到pastIllness字段
+                    val finalPastIllness = if (pastIllness == "OTHER" && customPastIllness.isNotEmpty()) {
+                        customPastIllness
+                    } else {
+                        pastIllness
+                    }
+                    
+                    val request = UpdateChildRequest(
+                        id = currentChild!!.id,
+                        name = name,
+                        gender = gender,
+                        birthYearMonth = birthYearMonth.ifEmpty { null },
+                        ethnicity = ethnicity.ifEmpty { null },
+                        currentSchool = currentSchool.ifEmpty { null },
+                        householdRegister = householdRegister.ifEmpty { null },
+                        birthOrder = birthOrder.ifEmpty { null },
+                        birthPlace = birthPlace.ifEmpty { null },
+                        languageEnvironment = languageEnvironment.ifEmpty { null },
+                        homeAddress = homeAddress.ifEmpty { null },
+                        habits = habits.ifEmpty { null },
+                        interestActivities = interestActivities.ifEmpty { null },
+                        healthStatus = healthStatus.ifEmpty { null },
+                        healthDescription = healthDescription.ifEmpty { null },
+                        pastIllness = finalPastIllness.ifEmpty { null },
+                        fatherPhone = fatherPhone.ifEmpty { null },
+                        motherPhone = motherPhone.ifEmpty { null },
+                        guardianPhone = guardianPhone.ifEmpty { null }
+                    )
 
                 val response: ApiResponse<Child> = childApiService.updateChild(request)
 
-                if (response.isSuccess() && response.data != null) {
-                    // 更新状态
-                    currentChild = response.data
+                if (response.isSuccess()) {
                     isEditing = false
                     isAdding = false
                     showToast = "孩子信息修改成功"
+                    // 自动刷新数据以显示最新信息
+                    loadChildInfo()
                 } else {
                     showToast = "更新孩子信息失败：${response.message}"
                 }
@@ -442,7 +566,7 @@ fun ChildInfoScreen(
                     navigationIcon = {
                         IconButton(onClick = onBackClick) {
                             Icon(
-                                imageVector = Icons.Filled.ArrowBack,
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "返回",
                                 tint = MaterialTheme.colorScheme.onPrimary
                             )
@@ -603,13 +727,21 @@ fun ChildInfoScreen(
 
                                 // 性别
                                 FormItem(label = "性别", isRequired = true) {
-                                    Row(modifier = Modifier.padding(bottom = 12.dp)) {
-                                        if (isEditing) {
-                                            GenderOption("男", gender == "男") { gender = "男" }
-                                            GenderOption("女", gender == "女") { gender = "女" }
-                                        } else {
-                                            Text(text = currentChild?.gender ?: "未设置")
-                                        }
+                                    if (isEditing) {
+                                        GenderSelection(
+                                            selectedGender = gender,
+                                            onGenderSelected = { gender = it },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 8.dp)
+                                        )
+                                    } else {
+                                        Text(
+                                            text = currentChild?.gender ?: "未设置",
+                                            modifier = Modifier.padding(vertical = 16.dp),
+                                            color = if (currentChild?.gender != null) MaterialTheme.colorScheme.onSurface
+                                            else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     }
                                 }
 
@@ -855,24 +987,71 @@ fun ChildInfoScreen(
                                     }
                                 }
 
-                                // 身体状态 - 在编辑模式下也显示
+                                // 身体状态 - 使用下拉单选框
                                 FormItem(label = "身体状态") {
                                     if (isEditing) {
-                                        TextField(
-                                            value = healthStatus,
-                                            onValueChange = { healthStatus = it },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            placeholder = { Text("请输入身体状态") },
-                                            colors = TextFieldDefaults.colors(
-                                                focusedContainerColor = Color.Transparent,
-                                                unfocusedContainerColor = Color.Transparent,
-                                                focusedIndicatorColor = Color.Transparent,
-                                                unfocusedIndicatorColor = Color.Transparent
-                                            )
+                                        // 健康状态选项列表
+                                        val healthStatusOptions = listOf(
+                                            Pair("EXCELLENT", "很好"),
+                                            Pair("GOOD", "良好"),
+                                            Pair("AVERAGE", "普通"),
+                                            Pair("POOR", "较差"),
+                                            Pair("VERY_POOR", "很差")
                                         )
+                                        
+                                        // 当前选中的显示文本
+                                        val selectedHealthStatusText = healthStatusOptions.find { it.first == healthStatus }?.second ?: ""
+                                        
+                                        // 下拉菜单状态
+                                        var expanded by remember { mutableStateOf(false) }
+                                        
+                                        ExposedDropdownMenuBox(
+                                            expanded = expanded,
+                                            onExpandedChange = { expanded = !expanded }
+                                        ) {
+                                            TextField(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .menuAnchor(),
+                                                readOnly = true,
+                                                value = selectedHealthStatusText,
+                                                onValueChange = {},
+                                                placeholder = { Text("请选择身体状态") },
+                                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                                colors = TextFieldDefaults.colors(
+                                                    focusedContainerColor = Color.Transparent,
+                                                    unfocusedContainerColor = Color.Transparent,
+                                                    focusedIndicatorColor = Color.Transparent,
+                                                    unfocusedIndicatorColor = Color.Transparent
+                                                )
+                                            )
+                                            ExposedDropdownMenu(
+                                                expanded = expanded,
+                                                onDismissRequest = { expanded = false }
+                                            ) {
+                                                healthStatusOptions.forEach { option ->
+                                                    DropdownMenuItem(
+                                                        text = { Text(option.second) },
+                                                        onClick = {
+                                                            healthStatus = option.first
+                                                            expanded = false
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        }
                                     } else {
+                                        // 非编辑模式下显示中文文本
+                                        val healthStatusMap = mapOf(
+                                            "EXCELLENT" to "很好",
+                                            "GOOD" to "良好",
+                                            "AVERAGE" to "普通",
+                                            "POOR" to "较差",
+                                            "VERY_POOR" to "很差"
+                                        )
+                                        val displayText = currentChild?.healthStatus?.let { healthStatusMap[it] } ?: "未设置"
                                         Text(
-                                            text = currentChild?.healthStatus ?: "未设置",
+                                            text = displayText,
                                             modifier = Modifier.padding(bottom = 12.dp)
                                         )
                                     }
@@ -906,56 +1085,118 @@ fun ChildInfoScreen(
                                     }
                                 }
 
-                                // 过往病史 - 在编辑模式下也显示
+                                // 过往病史 - 使用下拉单选框，支持其他选项的自定义输入
                                 FormItem(label = "过往病史") {
                                     if (isEditing) {
-                                        TextField(
-                                            value = pastIllness,
-                                            onValueChange = { pastIllness = it },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            placeholder = { Text("请输入过往病史") },
-                                            colors = TextFieldDefaults.colors(
-                                                focusedContainerColor = Color.Transparent,
-                                                unfocusedContainerColor = Color.Transparent,
-                                                focusedIndicatorColor = Color.Transparent,
-                                                unfocusedIndicatorColor = Color.Transparent
-                                            )
+                                        // 病史选项列表
+                                        val pastIllnessOptions = listOf(
+                                            Pair("NONE", "无"),
+                                            Pair("ENCEPHALITIS", "脑炎"),
+                                            Pair("EPILEPSY", "癫痫"),
+                                            Pair("HEART_DISEASE", "心脏病"),
+                                            Pair("ASTHMA", "哮喘"),
+                                            Pair("ALLERGY", "过敏"),
+                                            Pair("TUBERCULOSIS", "肺结核"),
+                                            Pair("OTHER", "其他")
                                         )
+                                        
+                                        // 当前选中的显示文本
+                                        val selectedPastIllnessText = pastIllnessOptions.find { it.first == pastIllness }?.second ?: ""
+                                        
+                                        // 下拉菜单状态
+                                        var expanded by remember { mutableStateOf(false) }
+                                        
+                                        // 自定义输入状态
+                                        var customPastIllness by remember { mutableStateOf("") }
+                                        
+                                        // 检查当前是否选择了其他选项
+                                        val isOtherSelected = pastIllness == "OTHER"
+                                        
+                                        Column {
+                                            ExposedDropdownMenuBox(
+                                                expanded = expanded,
+                                                onExpandedChange = { expanded = !expanded }
+                                            ) {
+                                                TextField(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .menuAnchor(),
+                                                    readOnly = true,
+                                                    value = selectedPastIllnessText,
+                                                    onValueChange = {},
+                                                    placeholder = { Text("请选择过往病史") },
+                                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                                    colors = TextFieldDefaults.colors(
+                                                        focusedContainerColor = Color.Transparent,
+                                                        unfocusedContainerColor = Color.Transparent,
+                                                        focusedIndicatorColor = Color.Transparent,
+                                                        unfocusedIndicatorColor = Color.Transparent
+                                                    )
+                                                )
+                                                ExposedDropdownMenu(
+                                                    expanded = expanded,
+                                                    onDismissRequest = { expanded = false }
+                                                ) {
+                                                    pastIllnessOptions.forEach { option ->
+                                                        DropdownMenuItem(
+                                                            text = { Text(option.second) },
+                                                            onClick = {
+                                                                pastIllness = option.first
+                                                                expanded = false
+                                                            }
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                            
+                                            // 当选择"其他"时，显示自定义输入框
+                                            if (isOtherSelected) {
+                                                Spacer(modifier = Modifier.height(8.dp))
+                                                TextField(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    value = customPastIllness,
+                                                    onValueChange = { customPastIllness = it },
+                                                    placeholder = { Text("请输入具体病史") },
+                                                    label = { Text("具体病史") },
+                                                    colors = TextFieldDefaults.colors(
+                                                        focusedContainerColor = Color.Transparent,
+                                                        unfocusedContainerColor = Color.Transparent,
+                                                        focusedIndicatorColor = Color.Transparent,
+                                                        unfocusedIndicatorColor = Color.Transparent
+                                                    )
+                                                )
+                                            }
+                                        }
                                     } else {
+                                        // 非编辑模式下显示中文文本
+                                        val pastIllnessMap = mapOf(
+                                            "NONE" to "无",
+                                            "ENCEPHALITIS" to "脑炎",
+                                            "EPILEPSY" to "癫痫",
+                                            "HEART_DISEASE" to "心脏病",
+                                            "ASTHMA" to "哮喘",
+                                            "ALLERGY" to "过敏",
+                                            "TUBERCULOSIS" to "肺结核",
+                                            "OTHER" to "其他"
+                                        )
+                                        
+                                        // 检查是否是"其他"选项
+                                        val isOther = currentChild?.pastIllness == "OTHER"
+                                        // 如果是"其他"选项，需要从pastIllnessDescription字段获取具体内容
+                                        val displayText = if (isOther && !currentChild?.healthDescription.isNullOrEmpty()) {
+                                            "其他: ${currentChild?.healthDescription}"
+                                        } else {
+                                            currentChild?.pastIllness?.let { pastIllnessMap[it] } ?: "未设置"
+                                        }
+                                        
                                         Text(
-                                            text = currentChild?.pastIllness ?: "未设置",
+                                            text = displayText,
                                             modifier = Modifier.padding(bottom = 12.dp)
                                         )
                                     }
                                 }
 
-                                // 病史描述 - 在编辑模式下也显示
-                                FormItem(label = "病史描述") {
-                                    if (isEditing) {
-                                        TextField(
-                                            value = pastIllnessDescription,
-                                            onValueChange = { pastIllnessDescription = it },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            placeholder = { Text("请输入病史描述（可选）") },
-                                            colors = TextFieldDefaults.colors(
-                                                focusedContainerColor = Color.Transparent,
-                                                unfocusedContainerColor = Color.Transparent,
-                                                focusedIndicatorColor = Color.Transparent,
-                                                unfocusedIndicatorColor = Color.Transparent
-                                            )
-                                        )
-                                    } else if (!currentChild?.pastIllnessDescription.isNullOrBlank()) {
-                                        Text(
-                                            text = currentChild?.pastIllnessDescription ?: "",
-                                            modifier = Modifier.padding(bottom = 12.dp)
-                                        )
-                                    } else {
-                                        Text(
-                                            text = "未设置",
-                                            modifier = Modifier.padding(bottom = 12.dp)
-                                        )
-                                    }
-                                }
+
 
                                 // 父亲电话 - 在编辑模式下也显示
                                 FormItem(label = "父亲电话") {

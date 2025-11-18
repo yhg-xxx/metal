@@ -1,6 +1,6 @@
 package com.example.network
 
-import com.example.model.BaseResponse
+
 import com.example.model.Counselor
 import com.example.model.LearningPackage
 import com.example.model.LearningVideo
@@ -46,7 +46,7 @@ interface ApiService {
     suspend fun createUser(
         @Part("user") user: RequestBody,
         @Part avatar: MultipartBody.Part? = null
-    ): BaseResponse<User>
+    ): ApiResponse<User>
     
     /**
      * 修改现有用户信息，支持上传新的头像文件
@@ -57,7 +57,7 @@ interface ApiService {
         @Query("phone") phone: String,
         @Part("user") user: RequestBody? = null,
         @Part avatar: MultipartBody.Part? = null
-    ): BaseResponse<User>
+    ): ApiResponse<User>
     
     /**
      * 提交快速咨询申请
@@ -71,13 +71,13 @@ interface ApiService {
         @Part("preferredMethod") preferredMethod: RequestBody,
         @Part files: List<MultipartBody.Part>? = null,
         @Part("matchedCounselorId") matchedCounselorId: RequestBody? = null
-    ): BaseResponse<QuickConsultation>
+    ): ApiResponse<QuickConsultation>
     
     /**
      * 根据用户ID查询已匹配的咨询师列表
      */
     @GET("api/quick-consultation/matched-counselors")
-    suspend fun getMatchedCounselors(@Query("useId") userId: Long): BaseResponse<List<Counselor>>
+    suspend fun getMatchedCounselors(@Query("useId") userId: Long): ApiResponse<List<Counselor>>
     
     /**
      * 获取指定用户和咨询师之间的对话记录
@@ -94,12 +94,12 @@ interface ApiService {
      * 获取所有学习包列表
      */
     @GET("api/learning-packages")
-    suspend fun getLearningPackages(): BaseResponse<List<LearningPackage>>
+    suspend fun getLearningPackages(): ApiResponse<List<LearningPackage>>
     
     /**
      * 根据学习包ID获取视频列表
      */
     @GET("api/learning-videos/package/{learningPackageId}")
-    suspend fun getVideosByLearningPackageId(@Path("learningPackageId") learningPackageId: Long): BaseResponse<List<LearningVideo>>
+    suspend fun getVideosByLearningPackageId(@Path("learningPackageId") learningPackageId: Long): ApiResponse<List<LearningVideo>>
 
 }

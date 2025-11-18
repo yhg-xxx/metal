@@ -1,5 +1,6 @@
 package com.example.util
 
+import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
@@ -7,7 +8,6 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import com.example.model.Task
 import com.example.model.User
-import androidx.core.database.sqlite.transaction
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -45,6 +45,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         private const val TASK_COLUMN_LAST_REMINDER_DATE = "last_reminder_date"
         
         // 日期格式化
+        @SuppressLint("ConstantLocale")
         private val DATE_FORMAT = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
     }
 
@@ -115,72 +116,142 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
     // 添加或更新用户
     fun addOrUpdateUser(user: User): Long {
         val db = this.writableDatabase
-        
-        // 开始事务
-        db.transaction() {
-            try {
-                // 如果用户要登录，先将所有其他用户的is_login设置为0
-                if (user.isLogin) {
-                    val logoutContentValues = ContentValues()
-                    logoutContentValues.put(COLUMN_IS_LOGIN, 0)
-                    update(TABLE_USER, logoutContentValues, null, null)
+        var result: Long = -1
+
+        try {
+            db.beginTransaction()
+
+            // 如果用户要登录，先将所有其他用户的is_login设置为0
+            if (user.isLogin) {
+                val logoutContentValues = ContentValues()
+                logoutContentValues.put(COLUMN_IS_LOGIN, 0)
+                db.update(TABLE_USER, logoutContentValues, null, null)
+            }
+
+            val contentValues = ContentValues()
+            contentValues.put(COLUMN_USERNAME, user.username)
+            contentValues.put(COLUMN_PHONE, user.phone)
+            contentValues.put(COLUMN_PASSWORD, user.password)
+            contentValues.put(COLUMN_EMAIL, user.email ?: "")
+            contentValues.put(COLUMN_NICKNAME, user.nickname ?: "")
+            contentValues.put(COLUMN_AVATAR_URL, user.avatarUrl ?: "")
+            contentValues.put(COLUMN_GENDER, user.gender)
+            contentValues.put(COLUMN_AGE, user.age)
+            contentValues.put(COLUMN_STATUS, user.status)
+            contentValues.put(COLUMN_IS_LOGIN, if (user.isLogin) 1 else 0)
+
+            // 处理时间字段
+            val currentTime = DATE_FORMAT.format(Date())
+            if (user.createdTime.isNullOrEmpty()) {
+                contentValues.put(COLUMN_CREATED_TIME, currentTime)
+            } else {
+                contentValues.put(COLUMN_CREATED_TIME, user.createdTime)
+            }
+            contentValues.put(COLUMN_UPDATED_TIME, currentTime)
+
+            // 先检查用户是否存在（根据ID或手机号）
+            val existingUser = if (user.id > 0) {
+                // 如果有ID，先按ID查找
+                getUserById(user.id)
+            } else {
+                // 否则按手机号查找
+                getUserByPhone(user.phone)
+            }
+
+            result = if (existingUser != null) {
+                // 更新现有用户
+                val whereClause = if (user.id > 0) {
+                    "$COLUMN_ID = ?"
+                } else {
+                    "$COLUMN_PHONE = ?"
+                }
+                val whereArgs = if (user.id > 0) {
+                    arrayOf(user.id.toString())
+                } else {
+                    arrayOf(user.phone)
                 }
 
-                val contentValues = ContentValues()
-                contentValues.put(COLUMN_USERNAME, user.username)
-                contentValues.put(COLUMN_PHONE, user.phone)
-                contentValues.put(COLUMN_PASSWORD, user.password)
-                contentValues.put(COLUMN_EMAIL, user.email ?: "")
-                contentValues.put(COLUMN_NICKNAME, user.nickname ?: "")
-                contentValues.put(COLUMN_AVATAR_URL, user.avatarUrl ?: "")
-                contentValues.put(COLUMN_GENDER, user.gender)
-                contentValues.put(COLUMN_AGE, user.age)
-                contentValues.put(COLUMN_STATUS, user.status)
-                contentValues.put(COLUMN_CREATED_TIME, user.createdTime ?: "")
-                contentValues.put(COLUMN_UPDATED_TIME, user.updatedTime ?: "")
-                contentValues.put(COLUMN_IS_LOGIN, if (user.isLogin) 1 else 0)
+                // 重要：在更新时不要包含ID字段，避免主键冲突
+                if (contentValues.containsKey(COLUMN_ID)) {
+                    contentValues.remove(COLUMN_ID)
+                }
 
-                // 同步远程数据库的ID到本地数据库，但只有当远程ID不为0时才更新
+                val updateResult = db.update(TABLE_USER, contentValues, whereClause, whereArgs)
+                println("更新用户结果: $updateResult, where: $whereClause, args: ${whereArgs.joinToString()}")
+                updateResult.toLong()
+            } else {
+                // 添加新用户
+                // 如果有远程ID，使用远程ID
                 if (user.id > 0) {
                     contentValues.put(COLUMN_ID, user.id)
                 }
+                val insertResult = db.insert(TABLE_USER, null, contentValues)
+                println("插入用户结果: $insertResult")
+                insertResult
+            }
 
-                // 先检查手机号是否已存在
-                val cursor = query(
-                    TABLE_USER,
-                    arrayOf(COLUMN_ID),
-                    "$COLUMN_PHONE = ?",
-                    arrayOf(user.phone),
-                    null,
-                    null,
-                    null
-                )
-                val userId = if (cursor.moveToFirst()) {
-                    cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_ID))
-                } else {
-                    0
-                }
-                cursor.close()
+            db.setTransactionSuccessful()
+            println("数据库事务提交成功")
+        } catch (e: Exception) {
+            e.printStackTrace()
+            result = -1
+            println("数据库事务失败: ${e.message}")
+        } finally {
+            db.endTransaction()
+        }
 
-                val result = if (userId > 0) {
-                    // 更新现有用户
-                    update(
-                        TABLE_USER,
-                        contentValues,
-                        "$COLUMN_ID = ?",
-                        arrayOf(userId.toString())
-                    ).toLong()
-                } else {
-                    // 添加新用户
-                    insert(TABLE_USER, null, contentValues)
-                }
+        return result
+    }
 
-                // 提交事务
-                return result
-            } finally {
-                // 结束事务
+    // 添加根据ID获取用户的方法
+    fun getUserById(id: Int): User? {
+        val db = this.readableDatabase
+        val cursor: Cursor? = db.rawQuery(
+            "SELECT * FROM $TABLE_USER WHERE $COLUMN_ID = ?",
+            arrayOf(id.toString())
+        )
+
+        return cursor?.use {
+            if (it.moveToFirst()) {
+                extractUserFromCursor(it)
+            } else {
+                null
             }
         }
+    }
+
+    // 提取公共的用户对象创建逻辑
+    private fun extractUserFromCursor(cursor: Cursor): User {
+        val id = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_ID))
+        val username = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USERNAME))
+        val phone = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PHONE))
+        val password = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PASSWORD))
+        val email = if (cursor.getColumnIndex(COLUMN_EMAIL) != -1) cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_EMAIL)) else null
+        val nickname = if (cursor.getColumnIndex(COLUMN_NICKNAME) != -1) cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_NICKNAME)) else null
+        val avatarUrl = if (cursor.getColumnIndex(COLUMN_AVATAR_URL) != -1) cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_AVATAR_URL)) else null
+        val gender = if (cursor.getColumnIndex(COLUMN_GENDER) != -1) cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_GENDER)) else "UNKNOWN"
+        val ageColumnIndex = cursor.getColumnIndex(COLUMN_AGE)
+        val age = if (ageColumnIndex != -1 && !cursor.isNull(ageColumnIndex)) cursor.getInt(ageColumnIndex) else null
+        val status = if (cursor.getColumnIndex(COLUMN_STATUS) != -1) cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_STATUS)) else "ACTIVE"
+        val createdTime = if (cursor.getColumnIndex(COLUMN_CREATED_TIME) != -1) cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CREATED_TIME)) else null
+        val updatedTime = if (cursor.getColumnIndex(COLUMN_UPDATED_TIME) != -1) cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_UPDATED_TIME)) else null
+        val isLogin = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_IS_LOGIN)) == 1
+
+        return User(
+            id = id,
+            username = username,
+            phone = phone,
+            password = password,
+            email = email,
+            nickname = nickname,
+            avatarUrl = avatarUrl,
+            gender = gender,
+            age = age,
+            status = status,
+            createdTime = createdTime,
+            updatedTime = updatedTime,
+            isLogin = isLogin
+        )
     }
 
     // 检查用户是否存在
@@ -446,7 +517,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         
         val createTime = try {
             DATE_FORMAT.parse(createTimeStr) ?: Date()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             Date()
         }
         
@@ -454,7 +525,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         val lastReminderDate = if (lastReminderDateStr != null && lastReminderDateStr.isNotEmpty()) {
             try {
                 DATE_FORMAT.parse(lastReminderDateStr)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 null
             }
         } else {

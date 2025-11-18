@@ -15,14 +15,19 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-
-
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.*
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,7 +42,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.R
 import com.example.model.User
-import com.example.model.BaseResponse
+import com.example.network.ApiResponse
 import com.example.network.ApiService
 import com.example.network.RetrofitClient
 import com.example.ui.theme.MentalTheme
@@ -48,12 +53,20 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
-import okhttp3.RequestBody
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
+
+// 格式化电话号码，中间部分显示为星号
+fun formatPhoneNumber(phone: String): String {
+    if (phone.length != 11) return phone
+    return phone.substring(0, 3) + "****" + phone.substring(7)
+}
 
 // 从Uri创建临时文件
 fun createTempFileFromUri(context: android.content.Context, uri: Uri): File {
@@ -69,6 +82,7 @@ fun createTempFileFromUri(context: android.content.Context, uri: Uri): File {
     
     return file
 }
+@Suppress("DEPRECATION")
 class ProfileEditActivity : AppCompatActivity() {
     private lateinit var dbHelper: DatabaseHelper
     private val apiService = RetrofitClient.apiService
@@ -134,8 +148,10 @@ fun ProfileEditScreen(
     var avatarUri by remember { mutableStateOf<Uri?>(null) }
     
     // 加载状态
-    var isLoading by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
+    
+    // 年龄选择器状态
+    var showAgeSelector by remember { mutableStateOf(false) }
     
     // 头像选择启动器
     val pickMedia = rememberLauncherForActivityResult(
@@ -188,13 +204,13 @@ fun ProfileEditScreen(
                             "email": ${if (updatedUser.email != null) "\"${updatedUser.email}\"" else "null"},
                             "nickname": ${if (updatedUser.nickname != null) "\"${updatedUser.nickname}\"" else "null"},
                             "gender": "${updatedUser.gender}",
-                            "age": ${if (updatedUser.age != null) updatedUser.age else "null"}
+                            "age": ${updatedUser.age ?: "null"}
                         }
                     """.trimIndent()
                     
                     val userMediaType = "application/json".toMediaTypeOrNull()
                     val userRequestBody = userMediaType?.let {
-                        RequestBody.create(it, userJson)
+                        userJson.toRequestBody(it)
                     }
                     
                     // 准备头像文件
@@ -202,7 +218,7 @@ fun ProfileEditScreen(
                         val file = createTempFileFromUri(context, uri)
                         val fileMediaType = (context.contentResolver.getType(uri) ?: "image/jpeg").toMediaTypeOrNull()
                         val requestFile = fileMediaType?.let {
-                            RequestBody.create(it, file)
+                            file.asRequestBody(it)
                         }
                         requestFile?.let {
                             MultipartBody.Part.createFormData(
@@ -230,7 +246,7 @@ fun ProfileEditScreen(
                         )
                     } else {
                         // 如果请求体为空，返回包含原用户信息的响应
-                        BaseResponse(200, "success", updatedUser)
+                        ApiResponse(200, "success", updatedUser)
                     }
                     
                     // 从响应中获取用户数据
@@ -274,39 +290,41 @@ fun ProfileEditScreen(
     
     Scaffold(
         modifier = Modifier
-            .fillMaxSize(), // 移除固定的状态栏内边距，让内容能够延伸到状态栏区域
+            .fillMaxSize(),
         topBar = {
-            // 使用与首页一致的TopAppBar实现
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "编辑个人资料",
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.Filled.ArrowBack,
-                            contentDescription = "返回",
-                            tint = MaterialTheme.colorScheme.onPrimary
+            // 添加圆角设计的TopAppBar
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "基本资料",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary
                         )
-                    }
-                },
-                actions = {
-                    TextButton(
-                        onClick = ::saveUserInfo,
-                        enabled = !isSaving
-                    ) {
-                        Text(text = "保存", color = MaterialTheme.colorScheme.onPrimary)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                ),
-
-            )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "返回",
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
+                    },
+                    actions = {
+                        TextButton(
+                            onClick = ::saveUserInfo,
+                            enabled = !isSaving,
+                            modifier = Modifier.padding(end = 8.dp)
+                        ) {
+                            Text(text = "保存", color = MaterialTheme.colorScheme.onPrimary)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp))
+                )
         }
     ) { paddingValues ->
         Column(
@@ -366,7 +384,7 @@ fun ProfileEditScreen(
                             )
                         }
                     }
-                    androidx.compose.material3.Text(
+                    Text(
                         text = "点击更换头像",
                         fontSize = 14.sp,
                         color = Color.Gray,
@@ -385,7 +403,7 @@ fun ProfileEditScreen(
                         value = username,
                         onValueChange = { username = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { androidx.compose.material3.Text(text = "请输入用户名") },
+                        placeholder = { Text(text = "请输入用户名") },
                         maxLines = 1,
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.Transparent,
@@ -402,7 +420,7 @@ fun ProfileEditScreen(
                         value = nickname,
                         onValueChange = { nickname = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { androidx.compose.material3.Text(text = "请输入昵称") },
+                        placeholder = { Text(text = "请输入昵称") },
                         maxLines = 1,
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.Transparent,
@@ -413,10 +431,10 @@ fun ProfileEditScreen(
                     )
                 }
                 
-                // 手机号（不可编辑）
+                // 手机号（不可编辑，部分隐藏）
                 FormItem(label = "手机号") {
-                    androidx.compose.material3.Text(
-                        text = user.phone,
+                    Text(
+                        text = formatPhoneNumber(user.phone),
                         modifier = Modifier.fillMaxWidth(),
                         color = Color.Gray
                     )
@@ -428,7 +446,7 @@ fun ProfileEditScreen(
                         value = email,
                         onValueChange = { email = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { androidx.compose.material3.Text(text = "请输入邮箱") },
+                        placeholder = { Text(text = "请输入邮箱") },
 
                         maxLines = 1,
                         colors = TextFieldDefaults.colors(
@@ -453,7 +471,7 @@ fun ProfileEditScreen(
                                 selectedColor = Color(0xFF5A67D8)
                             )
                         )
-                        androidx.compose.material3.Text(text = "男", modifier = Modifier.clickable { gender = "MALE" })
+                        Text(text = "男", modifier = Modifier.clickable { gender = "MALE" })
                         
                         RadioButton(
                             selected = gender == "FEMALE",
@@ -462,7 +480,7 @@ fun ProfileEditScreen(
                                 selectedColor = Color(0xFF5A67D8)
                             )
                         )
-                        androidx.compose.material3.Text(text = "女", modifier = Modifier.clickable { gender = "FEMALE" })
+                        Text(text = "女", modifier = Modifier.clickable { gender = "FEMALE" })
                         
                         RadioButton(
                             selected = gender == "UNKNOWN",
@@ -471,28 +489,94 @@ fun ProfileEditScreen(
                                 selectedColor = Color(0xFF5A67D8)
                             )
                         )
-                        androidx.compose.material3.Text(text = "保密", modifier = Modifier.clickable { gender = "UNKNOWN" })
+                        Text(text = "保密", modifier = Modifier.clickable { gender = "UNKNOWN" })
                     }
                 }
                 
-                // 年龄
-                FormItem(label = "年龄") {
-                    TextField(
-                        value = age,
-                        onValueChange = { newValue -> 
-                            age = if (newValue.matches(Regex("\\d*"))) newValue else age 
-                        },
+                // 年龄（点击选择）
+                FormItem(label = "我的年龄") {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { 
+                                    // 显示年龄选择器
+                                    showAgeSelector = true
+                                },
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (age.isNotEmpty()) "${age}岁" else "请选择",
+                                color = if (age.isNotEmpty()) Color.Black else Color.Gray
+                            )
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = "选择年龄",
+                                tint = Color.Gray,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 年龄选择器底部弹出框
+        if (showAgeSelector) {
+            ModalBottomSheet(
+                onDismissRequest = { showAgeSelector = false },
+                sheetState = rememberModalBottomSheetState(
+                    skipPartiallyExpanded = true
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    // 标题和按钮栏
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = { showAgeSelector = false }) {
+                            Text(text = "取消", color = Color.Gray)
+                        }
+                        Text(text = "选择年龄", fontWeight = FontWeight.Bold)
+                        TextButton(onClick = { showAgeSelector = false }) {
+                            Text(text = "确定", color = Color(0xFF5A67D8))
+                        }
+                    }
+                    
+                    // 年龄选择网格
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(5),
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { androidx.compose.material3.Text(text = "请输入年龄") },
-
-                        maxLines = 1,
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
-                        )
-                    )
+                        contentPadding = PaddingValues(8.dp)
+                    ) {
+                        items((1..80).toList()) { ageNum ->
+                            Box(
+                                modifier = Modifier
+                                    .padding(8.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        age = ageNum.toString()
+                                        showAgeSelector = false
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = ageNum.toString(),
+                                    fontSize = 16.sp,
+                                    color = if (age == ageNum.toString()) Color(0xFF5A67D8) else Color.Black
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -503,7 +587,7 @@ fun ProfileEditScreen(
 @Composable
 fun FormItem(label: String, content: @Composable () -> Unit) {
     Column(modifier = Modifier.padding(16.dp)) {
-        androidx.compose.material3.Text(
+        Text(
             text = label,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
@@ -512,5 +596,8 @@ fun FormItem(label: String, content: @Composable () -> Unit) {
         )
         content()
     }
-    androidx.compose.material3.Divider(modifier = Modifier.height(1.dp).background(Color(0xFFEEEEEE)))
+    HorizontalDivider(
+        modifier = Modifier.height(1.dp).background(Color(0xFFEEEEEE)),
+
+    )
 }

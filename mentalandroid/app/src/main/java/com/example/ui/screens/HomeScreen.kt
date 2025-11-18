@@ -17,12 +17,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Divider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -45,6 +43,8 @@ import coil.compose.AsyncImage
 import androidx.compose.ui.platform.LocalContext
 import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material3.HorizontalDivider
 import com.example.ui.features.CounselorDetailActivity
 import com.example.ui.features.QuickConsultationActivity
 
@@ -234,7 +234,7 @@ fun HomeScreen(modifier: Modifier = Modifier, onNavigateToSearch: () -> Unit) {
                         counselors!!.forEachIndexed { index, counselor ->
                             CounselorItem(counselor = counselor)
                             if (index < counselors!!.size - 1) {
-                                Divider(
+                                HorizontalDivider(
                                     modifier = Modifier.padding(vertical = 16.dp),
                                     thickness = 1.dp,
                                     color = MaterialTheme.colorScheme.outlineVariant
@@ -324,7 +324,7 @@ private fun FeatureEntryItem(text: String, imageRes: Int, onClick: (() -> Unit)?
         
         // 右侧箭头图标
         Icon(
-            imageVector = Icons.Filled.ArrowForward,
+            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
             contentDescription = "进入",
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier

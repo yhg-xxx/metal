@@ -44,8 +44,6 @@ data class Child(
 
     @SerializedName("pastDiseases")
     val pastIllness: String? = null,
-
-    val pastIllnessDescription: String? = null,
     val fatherPhone: String? = null,
     val motherPhone: String? = null,
     val guardianPhone: String? = null,
@@ -88,8 +86,6 @@ data class CreateChildRequest(
 
     @SerializedName("pastDiseases")
     val pastIllness: String? = null,
-
-    val pastIllnessDescription: String? = null,
     val fatherPhone: String? = null,
     val motherPhone: String? = null,
     val guardianPhone: String? = null
@@ -131,8 +127,6 @@ data class UpdateChildRequest(
 
     @SerializedName("pastDiseases")
     val pastIllness: String? = null,
-
-    val pastIllnessDescription: String? = null,
     val fatherPhone: String? = null,
     val motherPhone: String? = null,
     val guardianPhone: String? = null

@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,6 +35,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 
+@Suppress("DEPRECATION")
 class CounselorDetailActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,9 +64,8 @@ class CounselorDetailActivity : AppCompatActivity() {
 
     private fun setupImmersiveStatusBar() {
         // 让布局可以全屏，延展到状态栏里
-        WindowCompat.getInsetsController(window, window.decorView).let { controller ->
-            controller.isAppearanceLightStatusBars = false // 设置状态栏图标为浅色（白色）
-        }
+        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars =
+            false
 
         // 设置状态栏颜色为透明
         window.statusBarColor = android.graphics.Color.TRANSPARENT
@@ -354,7 +355,9 @@ fun CounselorDetailScreen(counselorId: Int, onBackPress: () -> Unit) {
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            Divider(modifier = Modifier.padding(vertical = 8.dp))
+                            HorizontalDivider(
+                                modifier = Modifier.padding(vertical = 8.dp),
+                            )
 
                             // 可用日期
                             Row(
@@ -373,7 +376,10 @@ fun CounselorDetailScreen(counselorId: Int, onBackPress: () -> Unit) {
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            Divider(modifier = Modifier.padding(vertical = 8.dp))
+                            HorizontalDivider(
+                                modifier = Modifier.padding(vertical = 8.dp),
+
+                            )
 
                             // 工作时间
                             Row(
@@ -392,7 +398,9 @@ fun CounselorDetailScreen(counselorId: Int, onBackPress: () -> Unit) {
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            Divider(modifier = Modifier.padding(vertical = 8.dp))
+                            HorizontalDivider(
+                                modifier = Modifier.padding(vertical = 8.dp),
+                            )
 
                             // 咨询时长
                             Row(
