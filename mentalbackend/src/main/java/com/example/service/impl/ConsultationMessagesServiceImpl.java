@@ -128,6 +128,12 @@ public class ConsultationMessagesServiceImpl extends ServiceImpl<ConsultationMes
         return processMessagesTime(messages);
     }
     
+    @Override
+    public List<ConsultationMessages> getUserLatestMessagesWithCounselors(Long userId) {
+        List<ConsultationMessages> messages = consultationMessagesMapper.getUserLatestMessagesWithCounselors(userId);
+        return processMessagesTime(messages);
+    }
+    
     /**
      * 处理消息时间：将北京时间减8小时并格式化为带T的格式
      */

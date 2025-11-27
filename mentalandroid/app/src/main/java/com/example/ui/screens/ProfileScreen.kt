@@ -25,6 +25,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -59,6 +61,7 @@ import com.example.ui.features.ProfileEditActivity
 import com.example.util.DatabaseHelper
 import com.example.util.IpAddressManager
 import com.example.util.TaskReminderService
+import com.example.ui.theme.LightGrayBackground
 import com.example.ui.theme.MentalTheme
 import java.text.SimpleDateFormat
 import java.util.*
@@ -74,25 +77,25 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
     val dbHelper = remember { DatabaseHelper(context) }
     var loggedInUser by remember { mutableStateOf(dbHelper.getLoggedInUser()) }
     var username by remember { mutableStateOf(loggedInUser?.username ?: "用户${(10000..99999).random()}") }
-    
+
     // 任务相关状态
     var tasks by remember { mutableStateOf(listOf<Task>()) }
     var showAddTaskDialog by remember { mutableStateOf(false) }
     var newTaskTitle by remember { mutableStateOf("") }
     var newTaskDescription by remember { mutableStateOf("") }
     var taskPriority by remember { mutableIntStateOf(1) }
-    
+
     // 加载任务数据
     LaunchedEffect(Unit) {
         tasks = dbHelper.getAllTasks()
         // 设置每日任务提醒
         TaskReminderService.setDailyTaskReminder(context)
     }
-    
+
     LaunchedEffect(key1 = loggedInUser) {
         username = loggedInUser?.username ?: "用户${(10000..99999).random()}"
     }
-    
+
     // 添加任务
     val addTask = {
         if (newTaskTitle.isNotBlank()) {
@@ -110,7 +113,7 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
             showAddTaskDialog = false
         }
     }
-    
+
     // 切换任务完成状态
     val toggleTaskCompletion = { taskId: Int ->
         val task = tasks.find { it.id == taskId }
@@ -120,16 +123,16 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
             tasks = dbHelper.getAllTasks()
         }
     }
-    
+
     // 删除任务
     val deleteTask = { taskId: Int ->
         dbHelper.deleteTask(taskId)
         tasks = dbHelper.getAllTasks()
     }
-    
+
     // 日期格式化
     val dateFormat = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
-    
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -169,14 +172,14 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
             item {
                 UserInfoCard(context, loggedInUser, username)
             }
-            
+
             // 退出登录按钮
             if (loggedInUser != null) {
                 item {
                     LogoutButton(context, dbHelper, onLogout = { loggedInUser = null })
                 }
             }
-            
+
             // 计划清单标题
             item {
                 Row(
@@ -195,7 +198,7 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
                     Box(
                         modifier = Modifier
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary)
+                            .background(MaterialTheme.colorScheme.onPrimary)
                             .clickable {
                                 showAddTaskDialog = true
                             }
@@ -204,13 +207,13 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
                         Icon(
                             imageVector = Icons.Filled.Add,
                             contentDescription = "添加任务",
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            tint = MaterialTheme.colorScheme.primaryContainer,
                             modifier = Modifier.size(24.dp)
                         )
                     }
                 }
             }
-            
+
             // 任务列表
             if (tasks.isEmpty()) {
                 item {
@@ -238,19 +241,19 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
                     }
                 }
             }
-            
-            // 功能菜单
+
+            // 功能菜单 - 用卡片包围
             item {
-                FeatureMenu()
+                FeatureMenuCard()
             }
-            
+
             // 底部间距
             item {
                 Spacer(modifier = Modifier.height(40.dp))
             }
         }
     }
-    
+
     // 添加任务对话框
     if (showAddTaskDialog) {
         AlertDialog(
@@ -318,7 +321,8 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
                 TextButton(onClick = { showAddTaskDialog = false }) {
                     Text("取消")
                 }
-            }
+            },
+            containerColor = LightGrayBackground
         )
     }
 }
@@ -328,12 +332,12 @@ private fun UserInfoCard(context: Context, loggedInUser: Any?, username: String)
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
+            .background(MaterialTheme.colorScheme.onPrimary)
             .padding(16.dp)
             .clip(RoundedCornerShape(10.dp))
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            // 用户头像
+            // 用户头像 - 可点击导航到个人信息页面
             val currentUser = loggedInUser as? com.example.model.User
             val avatarUrl = currentUser?.avatarUrl
             val processedAvatarUrl = IpAddressManager.processImageUrl(avatarUrl)
@@ -341,6 +345,17 @@ private fun UserInfoCard(context: Context, loggedInUser: Any?, username: String)
                 modifier = Modifier
                     .size(80.dp)
                     .clip(RoundedCornerShape(10.dp))
+                    .clickable {
+                        if (loggedInUser == null) {
+                            // 如果未登录，跳转到登录页
+                            val intent = Intent(context, LoginActivity::class.java)
+                            context.startActivity(intent)
+                        } else {
+                            // 已登录，进入个人资料详情
+                            val intent = Intent(context, ProfileEditActivity::class.java)
+                            context.startActivity(intent)
+                        }
+                    }
             ) {
                 AsyncImage(
                     model = processedAvatarUrl,
@@ -349,7 +364,7 @@ private fun UserInfoCard(context: Context, loggedInUser: Any?, username: String)
                     contentScale = ContentScale.Crop
                 )
             }
-            
+
             // 用户信息
             Column(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
                 Text(
@@ -360,33 +375,8 @@ private fun UserInfoCard(context: Context, loggedInUser: Any?, username: String)
                 Spacer(modifier = Modifier.height(4.dp))
                 // 移除"点击登录/注册"文字
             }
-            
-            // 进入个人资料按钮
-            Box(
-                modifier = Modifier
-                    .height(32.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .clip(RoundedCornerShape(16.dp))
-                    .padding(horizontal = 12.dp)
-                    .clickable { 
-                        if (loggedInUser == null) {
-                            // 如果未登录，跳转到登录页
-                            val intent = Intent(context, LoginActivity::class.java)
-                            context.startActivity(intent)
-                        } else {
-                            // 已登录，进入个人资料详情
-                            val intent = Intent(context, ProfileEditActivity::class.java)
-                            context.startActivity(intent)
-                        }
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "查看/修改",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+
+
         }
     }
 }
@@ -402,7 +392,7 @@ private fun LogoutButton(context: Context, dbHelper: DatabaseHelper, onLogout: (
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp)
-                .background(MaterialTheme.colorScheme.surface)
+                .background(MaterialTheme.colorScheme.onPrimary,RoundedCornerShape(12.dp))
                 .padding(horizontal = 16.dp)
                 .clickable {
                     // 执行退出登录操作
@@ -425,34 +415,78 @@ private fun LogoutButton(context: Context, dbHelper: DatabaseHelper, onLogout: (
 }
 
 @Composable
-private fun FeatureMenu() {
+private fun FeatureMenuCard() {
     val context = LocalContext.current
-    Column(modifier = Modifier.padding(16.dp)) {
-        // 推荐学习入口
-        ProfileMenuItem(
-            title = "推荐学习",
-            description = "查看为您定制的学习内容",
-            onClick = { /* 跳转到推荐学习页面 */ }
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.onPrimary
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 4.dp
         )
-        
-        // 评估记录入口
-        ProfileMenuItem(
-            title = "评估记录",
-            description = "查看心理状态评估报告",
-            onClick = { /* 跳转到评估记录页面 */ }
-        )
-        
-        // 孩子信息管理入口
-        ProfileMenuItem(
-            title = "孩子信息管理",
-            description = "管理孩子的基本信息和健康状况",
-            onClick = { 
-                // 跳转到孩子信息管理页面
-                context.startActivity(
-                    Intent(context, ChildInfoScreenActivity::class.java)
-                )
-            }
-        )
+    ) {
+        Column {
+            // 推荐学习入口
+            ProfileMenuItem(
+                title = "推荐学习",
+                description = "查看为您定制的学习内容",
+                onClick = { /* 跳转到推荐学习页面 */ }
+            )
+
+            // 分割线
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            )
+
+            // 评估记录入口
+            ProfileMenuItem(
+                title = "评估记录",
+                description = "查看心理状态评估报告",
+                onClick = { /* 跳转到评估记录页面 */ }
+            )
+
+            // 分割线
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            )
+
+            // 孩子信息管理入口
+            ProfileMenuItem(
+                title = "孩子信息管理",
+                description = "管理孩子的基本信息和健康状况",
+                onClick = {
+                    // 跳转到孩子信息管理页面
+                    context.startActivity(
+                        Intent(context, ChildInfoScreenActivity::class.java)
+                    )
+                }
+            )
+
+            // 分割线
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            )
+
+            // 设置入口
+            ProfileMenuItem(
+                title = "设置",
+                description = "应用配置和个性化设置",
+                onClick = { /* 设置页面尚未实现 */ }
+            )
+        }
     }
 }
 
@@ -469,7 +503,7 @@ private fun TaskItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
+            .background(MaterialTheme.colorScheme.onPrimary)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -498,7 +532,7 @@ private fun TaskItem(
                 )
             }
         }
-        
+
         // 任务内容
         Column(
             modifier = Modifier
@@ -530,7 +564,7 @@ private fun TaskItem(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        
+
         // 优先级标签
         Box(
             modifier = Modifier
@@ -559,7 +593,7 @@ private fun TaskItem(
                 }
             )
         }
-        
+
         // 删除按钮
         IconButton(onClick = onDelete) {
             Icon(
@@ -580,10 +614,8 @@ private fun ProfileMenuItem(title: String, description: String, onClick: () -> U
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-            .clip(RoundedCornerShape(8.dp))
-            .padding(16.dp)
-            .clickable(onClick = onClick),
+            .clickable(onClick = onClick)
+            .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -606,7 +638,6 @@ private fun ProfileMenuItem(title: String, description: String, onClick: () -> U
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
-    Spacer(modifier = Modifier.height(12.dp))
 }
 
 @Preview(showBackground = true)

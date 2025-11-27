@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 
 import androidx.compose.ui.text.font.FontWeight
@@ -36,6 +37,7 @@ import com.example.model.CreateChildRequest
 import com.example.model.UpdateChildRequest
 import com.example.network.ApiResponse
 import com.example.network.RetrofitClient
+import com.example.ui.theme.LightGrayBackground
 import com.example.ui.theme.MentalTheme
 import com.example.util.DatabaseHelper
 import kotlinx.coroutines.Dispatchers
@@ -64,24 +66,44 @@ fun FormItem(label: String, isRequired: Boolean = false, content: @Composable ()
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = label,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(vertical = 12.dp)
-            )
-            if (isRequired) {
+            // 字段名部分，设置固定宽度
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = "*",
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(start = 4.dp)
+                    text = label,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
+                if (isRequired) {
+                    Text(
+                        text = "*",
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
+                }
+                Text(
+                    text = "-",
+                    modifier = Modifier.padding(horizontal = 8.dp)
                 )
             }
+            // 字段值部分
+            Box(modifier = Modifier.weight(2f)) {
+                content()
+            }
         }
-        content()
-        HorizontalDivider(
-            modifier = Modifier.fillMaxWidth(),
-
-        )
+        // 修改分割线：从字段值部分开始
+        Row(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // 空出字段名部分的宽度
+            Spacer(modifier = Modifier.weight(1f))
+            // 分割线只占据字段值部分的宽度
+            HorizontalDivider(
+                modifier = Modifier.weight(2f)
+            )
+        }
     }
 }
 
@@ -96,8 +118,8 @@ fun GenderOption(
     val shape = RoundedCornerShape(12.dp)
 
     // 动态颜色
-    val selectedColor = MaterialTheme.colorScheme.primary
-    val unselectedColor = MaterialTheme.colorScheme.surfaceVariant
+    val selectedColor = MaterialTheme.colorScheme.primaryContainer // 修改为primaryContainer
+    val unselectedColor = LightGrayBackground
     val selectedTextColor = MaterialTheme.colorScheme.onPrimary
     val unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
 
@@ -137,7 +159,7 @@ fun GenderOption(
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
                 modifier = Modifier
-                    .padding(vertical = 16.dp)
+                    .padding(vertical = 8.dp) // 进一步减小按钮尺寸
                     .fillMaxWidth()
             )
         }
@@ -631,7 +653,8 @@ fun ChildInfoScreen(
                                         // 孩子下拉菜单
                                         DropdownMenu(
                                             expanded = showChildrenDropdown,
-                                            onDismissRequest = { showChildrenDropdown = false }
+                                            onDismissRequest = { showChildrenDropdown = false },
+                                            modifier = Modifier.background(LightGrayBackground)
                                         ) {
                                             childrenList.forEach { child ->
                                                 DropdownMenuItem(
@@ -691,15 +714,18 @@ fun ChildInfoScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
+                            .background(Color(237, 237, 237)) // 设置底层背景颜色为RGB(237,237,237)
                             .verticalScroll(scrollState)
                     ) {
                         // 孩子信息卡片
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp)
-                                .background(Color.White),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                .padding(16.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.onPrimary // 设置为纯白色
+                            )
                         ) {
                             Column(modifier = Modifier.padding(8.dp)) {
                                 // 姓名
@@ -720,7 +746,7 @@ fun ChildInfoScreen(
                                     } else {
                                         Text(
                                             text = currentChild?.name ?: "未设置",
-                                            modifier = Modifier.padding(bottom = 12.dp)
+            
                                         )
                                     }
                                 }
@@ -733,7 +759,7 @@ fun ChildInfoScreen(
                                             onGenderSelected = { gender = it },
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(vertical = 8.dp)
+                                                .padding(vertical = 6.dp) // 减小按钮尺寸
                                         )
                                     } else {
                                         Text(
@@ -775,7 +801,7 @@ fun ChildInfoScreen(
                                     } else {
                                         Text(
                                             text = currentChild?.birthYearMonth ?: "未设置",
-                                            modifier = Modifier.padding(bottom = 12.dp)
+            
                                         )
                                     }
                                 }
@@ -797,9 +823,8 @@ fun ChildInfoScreen(
                                         )
                                     } else {
                                         Text(
-                                            text = currentChild?.ethnicity ?: "未设置",
-                                            modifier = Modifier.padding(bottom = 12.dp)
-                                        )
+                                    text = currentChild?.ethnicity ?: "未设置"
+                                )
                                     }
                                 }
 
@@ -820,8 +845,7 @@ fun ChildInfoScreen(
                                         )
                                     } else {
                                         Text(
-                                            text = currentChild?.currentSchool ?: "未设置",
-                                            modifier = Modifier.padding(bottom = 12.dp)
+                                            text = currentChild?.currentSchool ?: "未设置"
                                         )
                                     }
                                 }
@@ -843,8 +867,7 @@ fun ChildInfoScreen(
                                         )
                                     } else {
                                         Text(
-                                            text = currentChild?.householdRegister ?: "未设置",
-                                            modifier = Modifier.padding(bottom = 12.dp)
+                                            text = currentChild?.householdRegister ?: "未设置"
                                         )
                                     }
                                 }
@@ -867,7 +890,7 @@ fun ChildInfoScreen(
                                     } else {
                                         Text(
                                             text = currentChild?.birthOrder ?: "未设置",
-                                            modifier = Modifier.padding(bottom = 12.dp)
+            
                                         )
                                     }
                                 }
@@ -890,7 +913,7 @@ fun ChildInfoScreen(
                                     } else {
                                         Text(
                                             text = currentChild?.birthPlace ?: "未设置",
-                                            modifier = Modifier.padding(bottom = 12.dp)
+            
                                         )
                                     }
                                 }
@@ -913,7 +936,7 @@ fun ChildInfoScreen(
                                     } else {
                                         Text(
                                             text = currentChild?.languageEnvironment ?: "未设置",
-                                            modifier = Modifier.padding(bottom = 12.dp)
+            
                                         )
                                     }
                                 }
@@ -936,7 +959,7 @@ fun ChildInfoScreen(
                                     } else {
                                         Text(
                                             text = currentChild?.homeAddress ?: "未设置",
-                                            modifier = Modifier.padding(bottom = 12.dp)
+            
                                         )
                                     }
                                 }
@@ -959,7 +982,7 @@ fun ChildInfoScreen(
                                     } else {
                                         Text(
                                             text = currentChild?.habits ?: "未设置",
-                                            modifier = Modifier.padding(bottom = 12.dp)
+            
                                         )
                                     }
                                 }
@@ -982,7 +1005,7 @@ fun ChildInfoScreen(
                                     } else {
                                         Text(
                                             text = currentChild?.interestActivities ?: "未设置",
-                                            modifier = Modifier.padding(bottom = 12.dp)
+            
                                         )
                                     }
                                 }
@@ -1027,7 +1050,8 @@ fun ChildInfoScreen(
                                             )
                                             ExposedDropdownMenu(
                                                 expanded = expanded,
-                                                onDismissRequest = { expanded = false }
+                                                onDismissRequest = { expanded = false },
+                                                modifier = Modifier.background(LightGrayBackground)
                                             ) {
                                                 healthStatusOptions.forEach { option ->
                                                     DropdownMenuItem(
@@ -1052,7 +1076,7 @@ fun ChildInfoScreen(
                                         val displayText = currentChild?.healthStatus?.let { healthStatusMap[it] } ?: "未设置"
                                         Text(
                                             text = displayText,
-                                            modifier = Modifier.padding(bottom = 12.dp)
+            
                                         )
                                     }
                                 }
@@ -1075,12 +1099,12 @@ fun ChildInfoScreen(
                                     } else if (!currentChild?.healthDescription.isNullOrBlank()) {
                                         Text(
                                             text = currentChild?.healthDescription ?: "",
-                                            modifier = Modifier.padding(bottom = 12.dp)
+            
                                         )
                                     } else {
                                         Text(
                                             text = "未设置",
-                                            modifier = Modifier.padding(bottom = 12.dp)
+            
                                         )
                                     }
                                 }
@@ -1135,7 +1159,8 @@ fun ChildInfoScreen(
                                                 )
                                                 ExposedDropdownMenu(
                                                     expanded = expanded,
-                                                    onDismissRequest = { expanded = false }
+                                                    onDismissRequest = { expanded = false },
+                                                    modifier = Modifier.background(LightGrayBackground)
                                                 ) {
                                                     pastIllnessOptions.forEach { option ->
                                                         DropdownMenuItem(
@@ -1191,7 +1216,7 @@ fun ChildInfoScreen(
                                         
                                         Text(
                                             text = displayText,
-                                            modifier = Modifier.padding(bottom = 12.dp)
+            
                                         )
                                     }
                                 }
@@ -1216,7 +1241,7 @@ fun ChildInfoScreen(
                                     } else {
                                         Text(
                                             text = currentChild?.fatherPhone ?: "未设置",
-                                            modifier = Modifier.padding(bottom = 12.dp)
+            
                                         )
                                     }
                                 }
@@ -1239,7 +1264,7 @@ fun ChildInfoScreen(
                                     } else {
                                         Text(
                                             text = currentChild?.motherPhone ?: "未设置",
-                                            modifier = Modifier.padding(bottom = 12.dp)
+            
                                         )
                                     }
                                 }
@@ -1262,7 +1287,7 @@ fun ChildInfoScreen(
                                     } else {
                                         Text(
                                             text = currentChild?.guardianPhone ?: "未设置",
-                                            modifier = Modifier.padding(bottom = 12.dp)
+            
                                         )
                                     }
                                 }
@@ -1283,7 +1308,10 @@ fun ChildInfoScreen(
                                 val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
                                 birthYearMonth = dateFormat.format(java.util.Date(selectedDate))
                                 showDatePicker = false
-                            }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer
+                            )
                         ) {
                             Text("确定")
                         }
@@ -1292,7 +1320,7 @@ fun ChildInfoScreen(
                         Button(
                             onClick = { showDatePicker = false },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                containerColor = LightGrayBackground
                             )
                         ) {
                             Text("取消")
@@ -1305,6 +1333,7 @@ fun ChildInfoScreen(
                             factory = {
                                 val calendarView = android.widget.CalendarView(it)
                                 calendarView.date = selectedDate
+                                calendarView.setBackgroundColor(LightGrayBackground.toArgb())
                                 calendarView.setOnDateChangeListener(object :
                                     android.widget.CalendarView.OnDateChangeListener {
                                     override fun onSelectedDayChange(
@@ -1319,9 +1348,11 @@ fun ChildInfoScreen(
                                     }
                                 })
                                 calendarView
-                            }
+                            },
+                            modifier = Modifier.background(LightGrayBackground)
                         )
-                    }
+                    },
+                    containerColor = LightGrayBackground
                 )
             }
         }

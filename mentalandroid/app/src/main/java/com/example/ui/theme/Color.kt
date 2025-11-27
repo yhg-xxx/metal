@@ -14,3 +14,5 @@ val Pink40 = Color(0xFFE3F2FD)  // 浅蓝白
 
 // 新增主题颜色 - 用于按钮等交互元素
 val ButtonBlue = Color(0xFF47A1F5)  // rgb(71,161,245)
+// 浅灰色背景色 - 用于图片选择区域和未选中的按钮背景
+val LightGrayBackground = Color(0xFFEDEDED)  // rgb(237,237,237)

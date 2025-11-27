@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -465,6 +466,9 @@ fun LoginScreen(
                         .fillMaxWidth()
                         .height(56.dp),
                     shape = RoundedCornerShape(28.dp),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    ),
                     // 始终启用按钮，即使未勾选协议
                     enabled = true
                 ) {
@@ -514,6 +518,9 @@ fun LoginScreen(
                         .fillMaxWidth()
                         .height(56.dp),
                     shape = RoundedCornerShape(28.dp),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    ),
                     // 只检查手机号和密码是否为空，不检查协议是否勾选
                     enabled = phoneNumber.isNotEmpty() && password.isNotEmpty()
                 ) {

@@ -160,7 +160,10 @@ fun CounselorDetailScreen(counselorId: Int, onBackPress: () -> Unit) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.onPrimary
+                        )
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.padding(16.dp)) {
@@ -221,7 +224,10 @@ fun CounselorDetailScreen(counselorId: Int, onBackPress: () -> Unit) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.onPrimary
+                        )
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -249,7 +255,10 @@ fun CounselorDetailScreen(counselorId: Int, onBackPress: () -> Unit) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.onPrimary
+                        )
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
@@ -275,7 +284,10 @@ fun CounselorDetailScreen(counselorId: Int, onBackPress: () -> Unit) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.onPrimary
+                        )
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
@@ -301,7 +313,10 @@ fun CounselorDetailScreen(counselorId: Int, onBackPress: () -> Unit) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.onPrimary
+                        )
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
@@ -327,7 +342,10 @@ fun CounselorDetailScreen(counselorId: Int, onBackPress: () -> Unit) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.onPrimary
+                        )
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
@@ -444,7 +462,7 @@ fun CounselorDetailScreen(counselorId: Int, onBackPress: () -> Unit) {
                         ) {
                             Text(
                                 text = "立即预约",
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                color = MaterialTheme.colorScheme.onPrimary,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold
                             )

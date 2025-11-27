@@ -35,6 +35,7 @@ import com.example.model.Counselor
 import com.example.model.SearchCounselorsRequest
 import com.example.network.RetrofitClient
 import com.example.ui.theme.MentalTheme
+import com.example.ui.theme.LightGrayBackground
 import com.example.util.IpAddressManager
 import com.example.util.CounselorUtils
 import kotlinx.coroutines.Dispatchers
@@ -249,7 +250,10 @@ fun CounselorSearchScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 600.dp),
-                shape = RoundedCornerShape(24.dp) // Material3推荐的圆角
+                shape = RoundedCornerShape(24.dp), // Material3推荐的圆角
+                colors = CardDefaults.cardColors(
+                    containerColor = LightGrayBackground
+                )
             ) {
                 Column {
                     // 弹窗标题 - 使用Material3的TopAppBar样式

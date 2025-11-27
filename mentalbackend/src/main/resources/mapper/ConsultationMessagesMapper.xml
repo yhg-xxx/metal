@@ -29,4 +29,17 @@
             #{id}
         </foreach>
     </update>
+    
+    <!-- 获取用户与每个咨询师的最新一条消息 -->
+    <select id="getUserLatestMessagesWithCounselors" resultType="com.example.entity.ConsultationMessages">
+        SELECT cm.* FROM consultation_messages cm
+        INNER JOIN (
+            SELECT counselor_id, MAX(sent_time) as max_time
+            FROM consultation_messages
+            WHERE user_id = #{userId}
+            GROUP BY counselor_id
+        ) latest ON cm.counselor_id = latest.counselor_id AND cm.sent_time = latest.max_time
+        WHERE cm.user_id = #{userId}
+        ORDER BY cm.sent_time DESC
+    </select>
 </mapper>

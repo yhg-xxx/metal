@@ -35,6 +35,7 @@ import androidx.core.content.ContextCompat
 import android.Manifest
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.ui.text.style.TextAlign
 import coil.compose.AsyncImage
 import java.util.UUID
 import com.example.model.Message
@@ -467,7 +468,7 @@ fun ChatDetailScreen(
                         modifier = Modifier
                             .width(36.dp)
                             .height(36.dp)
-                            .clip(RoundedCornerShape(18.dp))
+                            .clip(RoundedCornerShape(12.dp))
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                 }
@@ -477,7 +478,7 @@ fun ChatDetailScreen(
                 Box(
                     modifier = Modifier
                         .background(
-                            color = if (isUser) Color(0xFF5A67D8) else Color.White,
+                            color = if (isUser) MaterialTheme.colorScheme.primaryContainer else Color.White,
                             shape = RoundedCornerShape(16.dp)
                         )
                         .padding(12.dp)
@@ -513,14 +514,14 @@ fun ChatDetailScreen(
                         modifier = Modifier
                             .width(36.dp)
                             .height(36.dp)
-                            .clip(RoundedCornerShape(18.dp))
+                            .clip(RoundedCornerShape(12.dp))
                     )
                 } else {
                     Box(
                         modifier = Modifier
                             .width(36.dp)
                             .height(36.dp)
-                            .clip(RoundedCornerShape(18.dp))
+                            .clip(RoundedCornerShape(12.dp))
                             .background(Color(0xFFE0E0E0))
                     )
                 }
@@ -536,28 +537,14 @@ fun ChatDetailScreen(
             // 使用与首页一致的TopAppBar实现
             TopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (counselorAvatar != null) {
-                            val processedAvatarUrl = IpAddressManager.processImageUrl(counselorAvatar)
-                            AsyncImage(
-                                model = processedAvatarUrl,
-                                contentDescription = "咨询师头像",
-                                modifier = Modifier
-                                    .width(36.dp)
-                                    .height(36.dp)
-                                    .clip(RoundedCornerShape(18.dp))
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                        }
-                        Text(
-                            text = counselorName,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
+                    Text(
+                        text = counselorName,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackPress) {
@@ -698,7 +685,7 @@ fun ChatDetailScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Send,
                             contentDescription = "发送",
-                            tint = if (messageText.value.isNotBlank() && connectedState.value) Color(0xFF5A67D8) else Color.Gray
+                            tint = if (messageText.value.isNotBlank() && connectedState.value) MaterialTheme.colorScheme.primaryContainer else Color.Gray
                         )
                     }
                 }

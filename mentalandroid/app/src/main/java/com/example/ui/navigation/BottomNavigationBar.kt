@@ -1,5 +1,6 @@
 package com.example.ui.navigation
 
+
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
@@ -10,12 +11,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
+import com.example.ui.theme.ButtonBlue
+import com.example.ui.theme.LightGrayBackground
 
 /**
  * 底部导航栏组件
@@ -35,12 +39,13 @@ fun BottomNavigationBar(
         // 遍历所有导航项
         BottomNavigationItem.entries.forEach {
             NavigationBarItem(
+                modifier = Modifier,
                 icon = {
                     Icon(
                         imageVector = it.icon,
                         contentDescription = it.label,
                         tint = if (selectedTab == it) {
-                            MaterialTheme.colorScheme.primaryContainer
+                            ButtonBlue
                         } else {
                             Color.Gray
                         }
@@ -50,7 +55,7 @@ fun BottomNavigationBar(
                     Text(
                         text = it.label,
                         color = if (selectedTab == it) {
-                            MaterialTheme.colorScheme.primaryContainer
+                            ButtonBlue
                         } else {
                             Color.Gray
                         },
@@ -58,7 +63,14 @@ fun BottomNavigationBar(
                     )
                 },
                 selected = selectedTab == it,
-                onClick = { onTabSelected(it) }
+                onClick = { onTabSelected(it) },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = ButtonBlue,
+                    selectedTextColor = ButtonBlue,
+                    indicatorColor = LightGrayBackground,
+                    unselectedIconColor = Color.Gray,
+                    unselectedTextColor = Color.Gray
+                )
             )
         }
     }

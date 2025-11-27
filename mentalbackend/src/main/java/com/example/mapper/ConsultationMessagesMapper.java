@@ -28,4 +28,7 @@ public interface ConsultationMessagesMapper extends BaseMapper<ConsultationMessa
     
     // 批量更新消息的阅读状态
     int batchUpdateReadStatus(@Param("ids") List<Long> ids, @Param("readStatus") Boolean readStatus);
+    
+    // 获取用户与每个咨询师的最新一条消息
+    List<ConsultationMessages> getUserLatestMessagesWithCounselors(@Param("userId") Long userId);
 }

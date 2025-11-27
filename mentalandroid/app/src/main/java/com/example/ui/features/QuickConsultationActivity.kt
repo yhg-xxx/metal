@@ -12,6 +12,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
 import coil.compose.rememberAsyncImagePainter
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -34,7 +36,9 @@ import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.CheckCircle
 
 
+
 import com.example.network.RetrofitClient
+import com.example.ui.theme.LightGrayBackground
 import com.example.ui.theme.MentalTheme
 import com.example.util.DatabaseHelper
 import kotlinx.coroutines.Dispatchers
@@ -261,9 +265,12 @@ fun QuickConsultationScreen() {
                     // 问题描述
                     item {
                         Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                        ) {
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
                                     "核心心理问题描述", 
@@ -293,9 +300,12 @@ fun QuickConsultationScreen() {
                     // 问题持续时间
                     item {
                         Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                        ) {
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
                                     "问题持续时间", 
@@ -332,6 +342,8 @@ fun QuickConsultationScreen() {
                                         expanded = isDropdownExpanded,
                                         onDismissRequest = { isDropdownExpanded = false },
                                         modifier = Modifier.fillMaxWidth()
+                                                .background(LightGrayBackground)
+
                                     ) {
                                         durationOptions.forEach { option ->
                                             DropdownMenuItem(
@@ -352,9 +364,12 @@ fun QuickConsultationScreen() {
                     // 偏好咨询方式
                     item {
                         Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                        ) {
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
                                     "偏好咨询方式", 
@@ -375,7 +390,7 @@ fun QuickConsultationScreen() {
                                                 .height(48.dp)
                                                 .clip(RoundedCornerShape(8.dp))
                                                 .clickable { preferredMethod = value },
-                                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else LightGrayBackground,
                                             shape = RoundedCornerShape(8.dp)
                                         ) {
                                             Box(
@@ -384,7 +399,7 @@ fun QuickConsultationScreen() {
                                             ) {
                                                 Text(
                                                     text = label,
-                                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                                 )
                                             }
@@ -398,9 +413,12 @@ fun QuickConsultationScreen() {
                     // 图片上传
                     item {
                         Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                        ) {
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
                                     "上传相关图片（选填）", 
@@ -418,7 +436,7 @@ fun QuickConsultationScreen() {
                                             val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
                                             pickImageLauncher.launch(intent)
                                         },
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    color = LightGrayBackground,
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     if (selectedImageUri != null) {
@@ -493,7 +511,7 @@ fun QuickConsultationScreen() {
                                 Text(
                                     text = "提交咨询申请", 
                                     fontSize = 16.sp,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    color = MaterialTheme.colorScheme.onPrimary
                                 )
                             }
                         }

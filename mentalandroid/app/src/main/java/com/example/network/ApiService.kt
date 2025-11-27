@@ -80,6 +80,13 @@ interface ApiService {
     suspend fun getMatchedCounselors(@Query("useId") userId: Long): ApiResponse<List<Counselor>>
     
     /**
+     * 获取用户与每个咨询师的最新一条消息
+     * 注意：服务器返回直接是消息数组，不是包装在ApiResponse中
+     */
+    @GET("api/consultation/messages/user/latest")
+    suspend fun getUserLatestMessagesWithCounselors(@Query("userId") userId: Long): List<Message>
+    
+    /**
      * 获取指定用户和咨询师之间的对话记录
      */
     @GET("api/consultation/messages/conversation")

@@ -8,10 +8,10 @@ object IpAddressManager {
     
     // 当前后端服务器IP地址
     // 注意：当IP地址变更时，只需修改此常量即可
-    const val CURRENT_IP_ADDRESS = "192.168.106.109"
+    const val CURRENT_IP_ADDRESS = "192.168.231.109"
 
     // 后端服务器端口
-    const val SERVER_PORT = "8080"
+    const val SERVER_PORT = "8085"
     
     // 完整的服务器基础URL
     const val BASE_URL = "http://$CURRENT_IP_ADDRESS:$SERVER_PORT"

@@ -78,4 +78,24 @@ public class ConsultationMessageController {
             return ResponseEntity.internalServerError().build();
         }
     }
+    
+    /**
+     * 获取用户与每个咨询师的最新一条消息
+     * @param userId 用户ID
+     * @return 对话消息列表，每个咨询师一条最新消息
+     */
+    @GetMapping("/user/latest")
+    public ResponseEntity<List<ConsultationMessages>> getUserLatestMessagesWithCounselors(
+            @RequestParam Long userId) {
+
+        log.info("获取用户与每个咨询师的最新消息: 用户ID={}", userId);
+
+        try {
+            List<ConsultationMessages> messages = consultationMessagesService.getUserLatestMessagesWithCounselors(userId);
+            return ResponseEntity.ok(messages);
+        } catch (Exception e) {
+            log.error("获取用户最新消息失败: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 }

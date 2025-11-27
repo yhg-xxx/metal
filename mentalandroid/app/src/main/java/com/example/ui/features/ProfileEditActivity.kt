@@ -15,9 +15,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -316,7 +314,7 @@ fun ProfileEditScreen(
                             enabled = !isSaving,
                             modifier = Modifier.padding(end = 8.dp)
                         ) {
-                            Text(text = "保存", color = MaterialTheme.colorScheme.onPrimary)
+                            Text(text = "保存", color = MaterialTheme.colorScheme.onPrimary,fontSize = 16.sp)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -330,205 +328,230 @@ fun ProfileEditScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF7F7F7))
+                .background(Color(237, 237, 237)) // 设置底层背景颜色为RGB(237,237,237)
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
-            // 头像上传区域
-            Box(
+            // 白色卡片组件，包含所有用户信息
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White)
-                    .padding(24.dp)
-                    .clickable {
-                        pickMedia.launch(
-                            PickVisualMediaRequest(
-                                ActivityResultContracts.PickVisualMedia.ImageOnly
-                            )
-                        )
-                    },
-                contentAlignment = Alignment.Center
+                    .padding(16.dp)
+                    .clip(RoundedCornerShape(16.dp)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.onPrimary // 设置为纯白色
+                )
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    // 使用条件判断分别处理不同的头像来源
-                    if (avatarUri != null) {
-                        AsyncImage(
-                            model = avatarUri.toString(),
-                            contentDescription = "用户头像",
-                            modifier = Modifier
-                                .size(100.dp)
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        val avatarUrl = user.avatarUrl
-                        if (avatarUrl != null && avatarUrl.isNotEmpty()) {
-                            AsyncImage(
-                                model = avatarUrl,
-                                contentDescription = "用户头像",
-                                modifier = Modifier
-                                    .size(100.dp)
-                                    .clip(CircleShape),
-                                contentScale = ContentScale.Crop,
-                                placeholder = painterResource(id = R.drawable.img),
-                                error = painterResource(id = R.drawable.img)
+                // 头像上传区域
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp)
+                        .clickable {
+                            pickMedia.launch(
+                                PickVisualMediaRequest(
+                                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                                )
                             )
-                        } else {
-                            Image(
-                                painter = painterResource(id = R.drawable.img),
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        // 使用条件判断分别处理不同的头像来源
+                        if (avatarUri != null) {
+                            AsyncImage(
+                                model = avatarUri.toString(),
                                 contentDescription = "用户头像",
                                 modifier = Modifier
                                     .size(100.dp)
                                     .clip(CircleShape),
                                 contentScale = ContentScale.Crop
                             )
+                        } else {
+                            val avatarUrl = user.avatarUrl
+                            if (avatarUrl != null && avatarUrl.isNotEmpty()) {
+                                AsyncImage(
+                                    model = avatarUrl,
+                                    contentDescription = "用户头像",
+                                    modifier = Modifier
+                                        .size(100.dp)
+                                        .clip(CircleShape),
+                                    contentScale = ContentScale.Crop,
+                                    placeholder = painterResource(id = R.drawable.img),
+                                    error = painterResource(id = R.drawable.img)
+                                )
+                            } else {
+                                Image(
+                                    painter = painterResource(id = R.drawable.img),
+                                    contentDescription = "用户头像",
+                                    modifier = Modifier
+                                        .size(100.dp)
+                                        .clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
                         }
+                        Text(
+                            text = "点击更换头像",
+                            fontSize = 14.sp,
+                            color = Color.Gray,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
                     }
-                    Text(
-                        text = "点击更换头像",
-                        fontSize = 14.sp,
-                        color = Color.Gray,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
                 }
-            }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // 表单区域
-            Column(modifier = Modifier.background(Color.White)) {
-                // 用户名
-                FormItem(label = "用户名") {
-                    TextField(
-                        value = username,
-                        onValueChange = { username = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text(text = "请输入用户名") },
-                        maxLines = 1,
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
+                
+                // 表单区域
+                Column(modifier = Modifier) {
+                    // 用户名
+                    ProfileFormItem(label = "用户名", content = {
+                        TextField(
+                            value = username,
+                            onValueChange = { username = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text(text = "请输入用户名") },
+                            maxLines = 1,
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent
+                            )
                         )
-                    )
-                }
-                
-                // 昵称
-                FormItem(label = "昵称") {
-                    TextField(
-                        value = nickname,
-                        onValueChange = { nickname = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text(text = "请输入昵称") },
-                        maxLines = 1,
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
-                        )
-                    )
-                }
-                
-                // 手机号（不可编辑，部分隐藏）
-                FormItem(label = "手机号") {
-                    Text(
-                        text = formatPhoneNumber(user.phone),
-                        modifier = Modifier.fillMaxWidth(),
-                        color = Color.Gray
-                    )
-                }
-                
-                // 邮箱
-                FormItem(label = "邮箱") {
-                    TextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text(text = "请输入邮箱") },
+                    })
 
-                        maxLines = 1,
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
-                        )
-                    )
-                }
-                
-                // 性别
-                FormItem(label = "性别") {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        RadioButton(
-                            selected = gender == "MALE",
-                            onClick = { gender = "MALE" },
-                            colors = RadioButtonDefaults.colors(
-                                selectedColor = Color(0xFF5A67D8)
+                    ProfileFormItem(label = "昵称", content = {
+                        TextField(
+                            value = nickname,
+                            onValueChange = { nickname = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text(text = "请输入昵称") },
+                            maxLines = 1,
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent
                             )
                         )
-                        Text(text = "男", modifier = Modifier.clickable { gender = "MALE" })
-                        
-                        RadioButton(
-                            selected = gender == "FEMALE",
-                            onClick = { gender = "FEMALE" },
-                            colors = RadioButtonDefaults.colors(
-                                selectedColor = Color(0xFF5A67D8)
+                    })
+
+                    ProfileFormItem(label = "手机号", content = {
+                        Text(
+                            text = formatPhoneNumber(user.phone),
+                            modifier = Modifier.fillMaxWidth(),
+                            color = Color.Gray
+                        )
+                    })
+
+                    ProfileFormItem(label = "邮箱", content = {
+                        TextField(
+                            value = email,
+                            onValueChange = { email = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text(text = "请输入邮箱") },
+                            maxLines = 1,
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent
                             )
                         )
-                        Text(text = "女", modifier = Modifier.clickable { gender = "FEMALE" })
-                        
-                        RadioButton(
-                            selected = gender == "UNKNOWN",
-                            onClick = { gender = "UNKNOWN" },
-                            colors = RadioButtonDefaults.colors(
-                                selectedColor = Color(0xFF5A67D8)
-                            )
-                        )
-                        Text(text = "保密", modifier = Modifier.clickable { gender = "UNKNOWN" })
-                    }
-                }
-                
-                // 年龄（点击选择）
-                FormItem(label = "我的年龄") {
-                    Box(modifier = Modifier.fillMaxWidth()) {
+                    })
+
+                    ProfileFormItem(label = "性别", content = {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { 
-                                    // 显示年龄选择器
-                                    showAgeSelector = true
-                                },
+                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = if (age.isNotEmpty()) "${age}岁" else "请选择",
-                                color = if (age.isNotEmpty()) Color.Black else Color.Gray
-                            )
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                contentDescription = "选择年龄",
-                                tint = Color.Gray,
-                                modifier = Modifier.size(20.dp)
-                            )
+                            // 男性选项
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.clickable { gender = "MALE" }
+                            ) {
+                                RadioButton(
+                                    selected = gender == "MALE",
+                                    onClick = { gender = "MALE" },
+                                    colors = RadioButtonDefaults.colors(
+                                        selectedColor = MaterialTheme.colorScheme.primaryContainer
+                                    )
+                                )
+                                Text(text = "男", modifier = Modifier.padding(start = 4.dp))
+                            }
+
+                            // 女性选项
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.clickable { gender = "FEMALE" }
+                            ) {
+                                RadioButton(
+                                    selected = gender == "FEMALE",
+                                    onClick = { gender = "FEMALE" },
+                                    colors = RadioButtonDefaults.colors(
+                                        selectedColor = MaterialTheme.colorScheme.primaryContainer
+                                    )
+                                )
+                                Text(text = "女", modifier = Modifier.padding(start = 4.dp))
+                            }
+
+                            // 保密选项
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.clickable { gender = "UNKNOWN" }
+                            ) {
+                                RadioButton(
+                                    selected = gender == "UNKNOWN",
+                                    onClick = { gender = "UNKNOWN" },
+                                    colors = RadioButtonDefaults.colors(
+                                        selectedColor = MaterialTheme.colorScheme.primaryContainer
+                                    )
+                                )
+                                Text(text = "保密", modifier = Modifier.padding(start = 4.dp))
+                            }
                         }
-                    }
+                    })
+
+                    ProfileFormItem(label = "年龄", showDivider = false, content = {
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { 
+                                        showAgeSelector = true
+                                    },
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = if (age.isNotEmpty()) "${age}岁" else "请选择",
+                                    color = if (age.isNotEmpty()) Color.Black else Color.Gray
+                                )
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = "选择年龄",
+                                    tint = Color.Gray,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    })
+
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
-        
+
         // 年龄选择器底部弹出框
         if (showAgeSelector) {
             ModalBottomSheet(
                 onDismissRequest = { showAgeSelector = false },
                 sheetState = rememberModalBottomSheetState(
-                    skipPartiallyExpanded = true
-                )
+                    skipPartiallyExpanded = false // 允许部分展开
+                ),
+                containerColor = MaterialTheme.colorScheme.background,
+                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -548,20 +571,23 @@ fun ProfileEditScreen(
                         }
                         Text(text = "选择年龄", fontWeight = FontWeight.Bold)
                         TextButton(onClick = { showAgeSelector = false }) {
-                            Text(text = "确定", color = Color(0xFF5A67D8))
+                            Text(text = "确定", color = MaterialTheme.colorScheme.primaryContainer)
                         }
                     }
-                    
-                    // 年龄选择网格
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(5),
-                        modifier = Modifier.fillMaxWidth(),
+
+                    // 年龄选择单列布局 - 生成1-100的连续数字选项，每个数字单独占一行
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 280.dp), // 限制最大高度
                         contentPadding = PaddingValues(8.dp)
                     ) {
-                        items((1..80).toList()) { ageNum ->
+                        items(100) { index ->
+                            val ageNum = index + 1
                             Box(
                                 modifier = Modifier
-                                    .padding(8.dp)
+                                    .fillMaxWidth()
+                                    .padding(12.dp)
                                     .clip(RoundedCornerShape(8.dp))
                                     .clickable {
                                         age = ageNum.toString()
@@ -572,7 +598,7 @@ fun ProfileEditScreen(
                                 Text(
                                     text = ageNum.toString(),
                                     fontSize = 16.sp,
-                                    color = if (age == ageNum.toString()) Color(0xFF5A67D8) else Color.Black
+                                    color = if (age == ageNum.toString()) MaterialTheme.colorScheme.primaryContainer else Color.Black
                                 )
                             }
                         }
@@ -583,21 +609,41 @@ fun ProfileEditScreen(
     }
 }
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FormItem(label: String, content: @Composable () -> Unit) {
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text(
-            text = label,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.Gray,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-        content()
-    }
-    HorizontalDivider(
-        modifier = Modifier.height(1.dp).background(Color(0xFFEEEEEE)),
+fun ProfileFormItem(label: String, showDivider: Boolean = true, content: @Composable () -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .height(56.dp), // 固定高度确保间距一致
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Gray,
+                modifier = Modifier.width(80.dp) // 固定标签宽度
+            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                content()
+            }
+        }
 
-    )
+        // 只有当showDivider为true时才显示分割线
+        if (showDivider) {
+            HorizontalDivider(
+                thickness = 1.dp,
+                color = Color(0xFFEEEEEE)
+            )
+        }
+    }
 }
