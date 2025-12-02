@@ -84,8 +84,8 @@ fun MessageScreen(modifier: Modifier = Modifier) {
             if (loggedInUser != null && loggedInUser.id > 0) {
                 withContext(Dispatchers.IO) {
                     try {
-                        // 调用API获取匹配的咨询师，注意：参数名已更改为user_id
-                        val counselorsResponse = RetrofitClient.apiService.getMatchedCounselors(loggedInUser.id.toLong())
+                        // 调用API获取用户对话过的咨询师
+                        val counselorsResponse = RetrofitClient.apiService.getUserConversatedCounselors(loggedInUser.id.toLong())
                         if (counselorsResponse.code == 200 && counselorsResponse.data != null) {
                             counselors = counselorsResponse.data
                             Timber.d("成功获取咨询师列表，共 ${counselors?.size ?: 0} 条数据")

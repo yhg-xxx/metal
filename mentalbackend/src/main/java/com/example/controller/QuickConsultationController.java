@@ -50,6 +50,23 @@ public class QuickConsultationController {
             return Result.error("查询失败: " + e.getMessage());
         }
     }
+    
+    /**
+     * 根据用户ID获取所有咨询记录
+     */
+    @GetMapping("/user/records")
+    public Result getUserConsultationRecords(@RequestParam("userId") Long userId) {
+        try {
+            if (userId == null) {
+                return Result.error(400, "用户ID不能为空");
+            }
+            
+            List<QuickConsultationRequests> records = quickConsultationRequestsService.getUserQuickConsultations(userId);
+            return Result.success("查询成功", records);
+        } catch (Exception e) {
+            return Result.error("查询失败: " + e.getMessage());
+        }
+    }
 
     /**
      * 添加快速咨询申请

@@ -338,14 +338,12 @@ fun ChildInfoScreen(
                     isEditing = false
                     isAdding = false
                 } else {
-                    if (currentChildResponse.code == 404 || currentChildResponse.message.contains("未设置当前操作孩子")) {
-                        resetForm()
-                        isEditing = false
-                        isAdding = false
-                        currentChild = null
-                    } else {
-                        errorMessage = "获取孩子信息失败：${currentChildResponse.message}"
-                    }
+                    // 无论什么原因，只要没有获取到当前孩子，就直接进入添加模式
+                    resetForm()
+                    isEditing = true  // 直接进入编辑模式
+                    isAdding = true   // 表示正在添加新孩子
+                    currentChild = null
+                    showToast = "请至少设置一个孩子信息"  // 弹窗提示
                 }
 
                 // 处理所有孩子列表
@@ -359,7 +357,13 @@ fun ChildInfoScreen(
                 errorMessage = "未找到登录用户信息"
             }
         } catch (e: Exception) {
-            errorMessage = "加载数据时出错：${e.message}"
+            // 捕获异常时也直接进入添加模式
+            resetForm()
+            isEditing = true
+            isAdding = true
+            currentChild = null
+            errorMessage = null  // 清除错误信息，确保显示表单
+            showToast = "请至少设置一个孩子信息"
         } finally {
             isLoading = false
         }

@@ -38,6 +38,8 @@ import com.example.ui.theme.MentalTheme
 import com.example.ui.theme.LightGrayBackground
 import com.example.util.IpAddressManager
 import com.example.util.CounselorUtils
+import com.example.util.DatabaseHelper
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -46,6 +48,7 @@ import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.material3.HorizontalDivider
 import androidx.core.view.WindowCompat
+import android.widget.Toast
 
 
 @Suppress("DEPRECATION")
@@ -403,7 +406,54 @@ fun CounselorSearchScreen(
                     .clip(RoundedCornerShape(8.dp)) // 增加圆角效果
                     .background(MaterialTheme.colorScheme.primaryContainer) // 使用主题色
                     .clickable { 
-                        // 点击事件处理（空实现，仅用于阻止事件冒泡）
+                        // 处理私聊按钮点击事件
+                        val currentCounselor = counselor
+                        val currentContext = context
+                        val dbHelper = DatabaseHelper(currentContext)
+                        val loggedInUser = dbHelper.getLoggedInUser()
+                        val userId = loggedInUser?.id?.toLong() ?: 0L
+                        
+                        if (userId > 0 && currentCounselor.counselorId > 0) {
+                            // 启动协程调用API
+                            CoroutineScope(Dispatchers.Main).launch {
+                                try {
+                                    // 首先查询用户是否与目标咨询师存在历史对话
+                                    val response = withContext(Dispatchers.IO) {
+                                        RetrofitClient.apiService.getUserConversatedCounselors(userId)
+                                    }
+                                    val hasExistingConversation = response.data?.any {
+                                        it.counselorId.toLong() == currentCounselor.counselorId.toLong()
+                                    } == true
+                                    
+                                    // 根据是否存在历史对话执行不同逻辑
+                                    if (!hasExistingConversation) {
+                                        // 不存在历史对话，创建初始对话
+                                        withContext(Dispatchers.IO) {
+                                            RetrofitClient.apiService.createInitialConversation(
+                                                userId = userId,
+                                                counselorId = currentCounselor.counselorId.toLong()
+                                            )
+                                        }
+                                    }
+                                    
+                                    // 无论是否创建新对话，都跳转到聊天详情页
+                                    ChatDetailActivity.start(currentContext, userId, currentCounselor)
+                                } catch (e: Exception) {
+                                    // 显示错误提示
+                                    Toast.makeText(
+                                        currentContext,
+                                        "操作失败: ${e.message}",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        } else {
+                            Toast.makeText(
+                                currentContext,
+                                "请先登录",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     },
                 contentAlignment = Alignment.Center
             ) {

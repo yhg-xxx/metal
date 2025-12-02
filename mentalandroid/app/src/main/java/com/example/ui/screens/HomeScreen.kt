@@ -42,22 +42,23 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import androidx.compose.ui.platform.LocalContext
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material3.HorizontalDivider
-import com.example.ui.features.CounselorDetailActivity
-import com.example.ui.features.QuickConsultationActivity
-
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import kotlinx.coroutines.*
 import com.example.R
 import com.example.model.Counselor
-import com.example.util.CounselorUtils
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import timber.log.Timber
 import com.example.model.SearchCounselorsRequest
 import com.example.network.RetrofitClient
+import com.example.ui.features.ChatDetailActivity
+import com.example.ui.features.CounselorDetailActivity
+import com.example.ui.features.QuickConsultationActivity
 import com.example.ui.theme.MentalTheme
+import com.example.util.CounselorUtils
 import com.example.util.ImageLoadingUtils
+import timber.log.Timber
 
 
 /**
@@ -67,8 +68,6 @@ import com.example.util.ImageLoadingUtils
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(modifier: Modifier = Modifier, onNavigateToSearch: () -> Unit) {
-
-    
     val context = LocalContext.current
     
     // 导航到快速咨询页面
@@ -158,8 +157,6 @@ fun HomeScreen(modifier: Modifier = Modifier, onNavigateToSearch: () -> Unit) {
                 Spacer(modifier = Modifier.height(8.dp))
             }
             
-
-            
             // 平台保障
             item {
                 Row(
@@ -214,47 +211,75 @@ fun HomeScreen(modifier: Modifier = Modifier, onNavigateToSearch: () -> Unit) {
                 // 咨询师列表
                 Spacer(modifier = Modifier.height(12.dp))
                 if (isLoading) {
-                    Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                        Text(
-                            text = "加载中...", 
-                            color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.align(Alignment.Center)
-                        )
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.onPrimary // 设置为纯白色
+                        ),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Box(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
+                            Text(
+                                text = "加载中...", 
+                                color = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.align(Alignment.Center)
+                            )
+                        }
                     }
                 } else if (error != null) {
-                    Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                        Text(
-                            text = error!!, 
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.align(Alignment.Center)
-                        )
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.onPrimary // 设置为纯白色
+                        ),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Box(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
+                            Text(
+                                text = error!!, 
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.align(Alignment.Center)
+                            )
+                        }
                     }
                 } else if (counselors != null && counselors!!.isNotEmpty()) {
                     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                         counselors!!.forEachIndexed { index, counselor ->
                             CounselorItem(counselor = counselor)
                             if (index < counselors!!.size - 1) {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(vertical = 16.dp),
-                                    thickness = 1.dp,
-                                    color = MaterialTheme.colorScheme.outlineVariant
-                                )
+                                Spacer(modifier = Modifier.height(12.dp))
                             }
                         }
                     }
                 } else {
-                    Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                        Text(
-                            text = "暂无咨询师数据", 
-                            color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.align(Alignment.Center)
-                        )
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.onPrimary // 设置为纯白色
+                        ),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Box(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
+                            Text(
+                                text = "暂无咨询师数据", 
+                                color = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.align(Alignment.Center)
+                            )
+                        }
                     }
                 }
             }
         }
     }
-
 }
 
 /**
@@ -277,60 +302,71 @@ private fun PlatformGuaranteeItem(text: String) {
 private fun FeatureEntryItem(text: String, imageRes: Int, onClick: (() -> Unit)? = null) {
     val subText = if (text == "心理测评") "测一测你是什么样的人" else "匹配合适的心理导师"
     
-    Row(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
             .height(88.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surface)
-
             .clickable { onClick?.invoke() },
-        verticalAlignment = Alignment.CenterVertically
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.onPrimary // 设置为纯白色
+        ),
+        shape = RoundedCornerShape(12.dp)
     ) {
-        // 左侧图标
-        Box(
+        Row(
             modifier = Modifier
-                .width(60.dp)
-                .height(60.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer)
-
+                .fillMaxWidth()
+                .fillMaxSize() // 确保Row占满Card高度
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Image(
-                painter = painterResource(id = imageRes),
-                contentDescription = text,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
+            // 左侧图标
+            Box(
+                modifier = Modifier
+                    .width(60.dp)
+                    .height(60.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center // 确保图片在Box内居中
+            ) {
+                Image(
+                    painter = painterResource(id = imageRes),
+                    contentDescription = text,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            
+            // 中间文字内容
+            Column(
+                modifier = Modifier.weight(1f)
+                    .padding(start = 12.dp),
+                verticalArrangement = Arrangement.Center // 确保文字垂直居中
+            ) {
+                Text(
+                    text = text,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = subText,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            
+            // 右侧箭头图标
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = "进入",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .size(16.dp)
+                    .padding(16.dp)
             )
         }
-        
-        // 中间文字内容
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-            Text(
-                text = text,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = subText,
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        
-        // 右侧箭头图标
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-            contentDescription = "进入",
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier
-                .size(16.dp)
-                .padding(16.dp)
-        )
     }
 }
 
@@ -340,101 +376,156 @@ private fun FeatureEntryItem(text: String, imageRes: Int, onClick: (() -> Unit)?
 @Composable
 private fun CounselorItem(counselor: Counselor) {
     val context = LocalContext.current
-    Row(
+    Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-            .clip(RoundedCornerShape(10.dp))
-            .padding(12.dp)
-            .clickable {
-                val intent = Intent(context, CounselorDetailActivity::class.java)
-                intent.putExtra("counselorId", counselor.counselorId)
-                context.startActivity(intent)
-            },
-        horizontalArrangement = Arrangement.SpaceBetween
+            .fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.onPrimary // 设置为纯白色
+        ),
+        shape = RoundedCornerShape(16.dp)
     ) {
-        // 咨询师头像
-        // 处理和记录图片URL
-        val imageUrl = ImageLoadingUtils.processImageUrl(counselor.photoUrl)
-        Timber.d("加载咨询师头像: name=${counselor.realName}, originalUrl=${counselor.photoUrl}, processedUrl=$imageUrl")
-        
-        Box(
+        Row(
             modifier = Modifier
-                .size(60.dp)
-                .clip(RoundedCornerShape(10.dp))
-        ) {
-            // 使用基本的AsyncImage配置，移除占位图
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = "${counselor.realName}的头像",
-                modifier = Modifier.fillMaxSize(),
-                // 仅保留错误图，移除占位图
-                error = painterResource(id = R.drawable.img),
-                contentScale = ContentScale.Crop,
-                onError = { error ->
-                    Timber.e("头像加载失败: $error, url=$imageUrl")
+                .fillMaxWidth()
+                .padding(16.dp)
+                .clickable {
+                    val intent = Intent(context, CounselorDetailActivity::class.java)
+                    intent.putExtra("counselorId", counselor.counselorId)
+                    context.startActivity(intent)
                 },
-                onSuccess = {
-                    Timber.d("头像加载成功: ${counselor.realName}")
-                }
-            )
-        }
-        
-        // 咨询师信息
-        Column(
-            modifier = Modifier.weight(1f).padding(horizontal = 12.dp)
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = CounselorUtils.parseSpecialization(counselor.specialization),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = CounselorUtils.getQualificationLabel(counselor),
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "${counselor.realName} 从业${counselor.yearsOfExperience}年 · 咨询人数${counselor.totalSessions}人",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Row {
-                Text(
-                    text = CounselorUtils.getServiceLabels(counselor),
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "¥${counselor.consultationFee}起",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.error
+            // 咨询师头像
+            // 处理和记录图片URL
+            val imageUrl = ImageLoadingUtils.processImageUrl(counselor.photoUrl)
+            Timber.d("加载咨询师头像: name=${counselor.realName}, originalUrl=${counselor.photoUrl}, processedUrl=$imageUrl")
+            
+            Box(
+                modifier = Modifier
+                    .size(60.dp)
+                    .clip(RoundedCornerShape(10.dp))
+            ) {
+                // 使用基本的AsyncImage配置，移除占位图
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = "${counselor.realName}的头像",
+                    modifier = Modifier.fillMaxSize(),
+                    // 仅保留错误图，移除占位图
+                    error = painterResource(id = R.drawable.img),
+                    contentScale = ContentScale.Crop,
+                    onError = { error ->
+                        Timber.e("头像加载失败: $error, url=$imageUrl")
+                    },
+                    onSuccess = {
+                        Timber.d("头像加载成功: ${counselor.realName}")
+                    }
                 )
             }
-        }
-        
-        // 私聊按钮
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(8.dp)) // 增加圆角效果
-                .background(MaterialTheme.colorScheme.primaryContainer) // 使用新的按钮蓝色
-                .clickable {},
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "私聊",
-                color = MaterialTheme.colorScheme.onPrimary,
-                fontSize = 12.sp
-            )
+            
+            // 咨询师信息
+            Column(
+                modifier = Modifier.weight(1f).padding(start = 12.dp)
+            ) {
+                Text(
+                    text = CounselorUtils.parseSpecialization(counselor.specialization),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = CounselorUtils.getQualificationLabel(counselor),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "${counselor.realName} 从业${counselor.yearsOfExperience}年 · 咨询人数${counselor.totalSessions}人",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row {
+                    Text(
+                        text = CounselorUtils.getServiceLabels(counselor),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "¥${counselor.consultationFee}起",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+            
+            // 私聊按钮
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(8.dp)) // 增加圆角效果
+                    .background(MaterialTheme.colorScheme.primaryContainer) // 使用新的按钮蓝色
+                    .clickable {
+                        // 处理私聊按钮点击事件
+                        val dbHelper = com.example.util.DatabaseHelper(context)
+                        val loggedInUser = dbHelper.getLoggedInUser()
+                        val userId = loggedInUser?.id?.toLong() ?: 0L
+                        
+                        if (userId > 0 && counselor.counselorId > 0) {
+                            // 启动协程调用API
+                            CoroutineScope(Dispatchers.Main).launch {
+                                try {
+                                    // 首先查询用户是否与目标咨询师存在历史对话
+                                    val response = withContext(Dispatchers.IO) {
+                                        RetrofitClient.apiService.getUserConversatedCounselors(userId)
+                                    }
+                                    val hasExistingConversation = response.data?.any { 
+                                        it.counselorId.toLong() == counselor.counselorId.toLong() 
+                                    } == true
+                                    
+                                    // 根据是否存在历史对话执行不同逻辑
+                                    if (!hasExistingConversation) {
+                                        // 不存在历史对话，创建初始对话
+                                        withContext(Dispatchers.IO) {
+                                            RetrofitClient.apiService.createInitialConversation(
+                                                userId = userId,
+                                                counselorId = counselor.counselorId.toLong()
+                                            )
+                                        }
+                                    }
+                                    
+                                    // 无论是否创建新对话，都跳转到聊天详情页
+                                    ChatDetailActivity.start(context, userId, counselor)
+                                } catch (e: Exception) {
+                                    // 显示错误提示
+                                    Toast.makeText(
+                                        context,
+                                        "操作失败: ${e.message}",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        } else {
+                            Toast.makeText(
+                                context,
+                                "请先登录",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "私聊",
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    fontSize = 12.sp
+                )
+            }
         }
     }
 }

@@ -74,7 +74,7 @@ public class FileUploadController {
             System.err.println(fileName + "--文件上传失败");
         }
 
-        String http = "http://localhost:8080/files/download/";
+        String http = "http://localhost:8085/files/download/";
         Map<String, Object> resMap = new HashMap<>();
 
         // 构建返回参数（需根据实际工具类调整）

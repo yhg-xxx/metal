@@ -1,10 +1,12 @@
 package com.example.controller;
 
 import com.example.entity.Users;
+import com.example.service.FileUploadService;
 import com.example.service.UsersService;
 import com.example.utils.Result;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,6 +29,9 @@ public class UsersController {
 
     @Resource
     private ObjectMapper objectMapper;
+
+    @Resource
+    private FileUploadService fileUploadService;
 
     /**
      * 新增用户
@@ -99,7 +104,7 @@ public class UsersController {
             if (phone == null || phone.isEmpty()) {
                 return Result.error(400, "电话号码不能为空");
             }
-            
+
             // 检查用户是否存在
             Users existingUser = usersService.lambdaQuery()
                     .eq(Users::getPhone, phone)
@@ -131,13 +136,27 @@ public class UsersController {
 
             // 如果上传了新的头像，处理头像文件
             if (avatar != null && !avatar.isEmpty()) {
-                // 使用现有的文件上传控制器上传头像
-                Result uploadResult = Result.success(fileUploadController.uploadFile(avatar));
-                if (uploadResult.getCode() == 200 && 
-                    uploadResult.getData() instanceof Map && 
-                    ((Map<?, ?>)uploadResult.getData()).containsKey("url")) {
-                    // 更新用户头像URL
-                    existingUser.setAvatarUrl((String) ((Map<?, ?>)uploadResult.getData()).get("url"));
+                try {
+                    // 直接调用FileUploadService而不是FileUploadController
+                    // 这样可以更好地处理返回结果
+                    ResponseEntity<Map<String, Object>> uploadResponse = fileUploadService.uploadFile(avatar);
+
+                    if (uploadResponse.getStatusCode().is2xxSuccessful()) {
+                        Map<String, Object> uploadResult = uploadResponse.getBody();
+                        if (uploadResult != null && uploadResult.containsKey("url")) {
+                            // 更新用户头像URL
+                            String newAvatarUrl = (String) uploadResult.get("url");
+                            existingUser.setAvatarUrl(newAvatarUrl);
+                            System.out.println("新头像URL: " + newAvatarUrl); // 添加日志
+                        } else {
+                            System.err.println("上传成功但返回结果中缺少URL字段");
+                        }
+                    } else {
+                        System.err.println("头像上传失败，状态码: " + uploadResponse.getStatusCode());
+                    }
+                } catch (Exception e) {
+                    System.err.println("头像上传异常: " + e.getMessage());
+                    e.printStackTrace();
                 }
             }
 

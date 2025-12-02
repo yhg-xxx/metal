@@ -84,6 +84,24 @@ public class QuickConsultationRequestsServiceImpl extends ServiceImpl<QuickConsu
     
     @Transactional
     @Override
+    public List<QuickConsultationRequests> getUserQuickConsultations(Long userId) {
+        if (userId == null) {
+            log.warn("用户ID为空，无法查询咨询记录");
+            return new ArrayList<>();
+        }
+        
+        // 根据用户ID查询所有咨询记录，按创建时间倒序排列
+        QueryWrapper<QuickConsultationRequests> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_id", userId)
+                   .orderByDesc("created_time");
+        
+        List<QuickConsultationRequests> requests = list(queryWrapper);
+        log.info("查询用户咨询记录成功，用户ID: {}, 记录数: {}", userId, requests != null ? requests.size() : 0);
+        
+        return requests != null ? requests : new ArrayList<>();
+    }
+    
+    @Override
     public boolean matchCounselor(Long requestId) {
         // 1. 获取快速咨询申请信息
         QuickConsultationRequests request = getById(requestId);

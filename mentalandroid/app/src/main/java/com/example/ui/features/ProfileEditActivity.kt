@@ -162,11 +162,12 @@ fun ProfileEditScreen(
     )
     
     // 保存用户信息
+    // 保存用户信息
     fun saveUserInfo() {
         if (isSaving) return
-        
+
         isSaving = true
-        
+
         // 验证年龄
         val ageValue = age.toIntOrNull()
         if (age.isNotEmpty() && ageValue == null) {
@@ -174,7 +175,7 @@ fun ProfileEditScreen(
             isSaving = false
             return
         }
-        
+
         // 创建更新后的用户对象
         val updatedUser = user.copy(
             username = username,
@@ -183,34 +184,34 @@ fun ProfileEditScreen(
             gender = gender,
             age = ageValue
         )
-        
+
         coroutineScope.launch {
             try {
                 // 1. 先保存到本地数据库
                 dbHelper.addOrUpdateUser(updatedUser)
-                
+
                 // 2. 再调用API保存到远端服务器
-                val responseUser: User = withContext(Dispatchers.IO) {
+                val responseResult = withContext(Dispatchers.IO) {
                     val localApiService = apiService
-                    
+
                     // 准备用户信息JSON字符串
                     val userJson = """
-                        {
-                            "username": "${updatedUser.username}",
-                            "password": "${updatedUser.password}",
-                            "phone": "${updatedUser.phone}",
-                            "email": ${if (updatedUser.email != null) "\"${updatedUser.email}\"" else "null"},
-                            "nickname": ${if (updatedUser.nickname != null) "\"${updatedUser.nickname}\"" else "null"},
-                            "gender": "${updatedUser.gender}",
-                            "age": ${updatedUser.age ?: "null"}
-                        }
-                    """.trimIndent()
-                    
+                    {
+                        "username": "${updatedUser.username}",
+                        "password": "${updatedUser.password}",
+                        "phone": "${updatedUser.phone}",
+                        "email": ${if (updatedUser.email != null) "\"${updatedUser.email}\"" else "null"},
+                        "nickname": ${if (updatedUser.nickname != null) "\"${updatedUser.nickname}\"" else "null"},
+                        "gender": "${updatedUser.gender}",
+                        "age": ${updatedUser.age ?: "null"}
+                    }
+                """.trimIndent()
+
                     val userMediaType = "application/json".toMediaTypeOrNull()
                     val userRequestBody = userMediaType?.let {
                         userJson.toRequestBody(it)
                     }
-                    
+
                     // 准备头像文件
                     val avatarPart = avatarUri?.let { uri ->
                         val file = createTempFileFromUri(context, uri)
@@ -226,10 +227,10 @@ fun ProfileEditScreen(
                             )
                         }
                     }
-                    
+
                     // 判断是创建还是更新用户
                     val existingUser = dbHelper.getLoggedInUser()
-                    val apiResponse = if (existingUser != null && existingUser.id > 0 && userRequestBody != null) {
+                    return@withContext if (existingUser != null && existingUser.id > 0 && userRequestBody != null) {
                         // 更新用户
                         localApiService.updateUser(
                             phone = existingUser.phone,
@@ -246,38 +247,47 @@ fun ProfileEditScreen(
                         // 如果请求体为空，返回包含原用户信息的响应
                         ApiResponse(200, "success", updatedUser)
                     }
-                    
-                    // 从响应中获取用户数据
-                    apiResponse.data ?: updatedUser
                 }
-                
-                // 更新本地用户信息（包含从服务器返回的额外信息）
-                // 处理avatarUrl前缀，使用统一的IP地址管理工具
-                // 添加日志记录以调试
-                println("原始avatarUrl: ${responseUser.avatarUrl}")
-                
-                val processedAvatarUrl = IpAddressManager.processImageUrl(responseUser.avatarUrl)
-                println("处理后avatarUrl: $processedAvatarUrl")
-                
-                val finalUser = responseUser.copy(
-                    avatarUrl = processedAvatarUrl,
-                    status = responseUser.status ?: "ACTIVE", // 处理null情况，使用默认值
-                    isLogin = user.isLogin // 保留登录状态
-                )
-                dbHelper.addOrUpdateUser(finalUser)
-                
-                // 更新状态
-                user = finalUser
-                
-                // 显示保存成功提示
-                withContext(Dispatchers.Main) {
-                    // 显示Toast提示保存成功
-                    android.widget.Toast.makeText(context, "保存成功", android.widget.Toast.LENGTH_SHORT).show()
-//                    onBack() // 保存成功后返回上一页
+
+                // 检查API响应是否成功
+                if (responseResult.code == 200 && responseResult.data != null) {
+                    // 服务器更新成功，使用服务器返回的数据更新本地
+                    val responseUser = responseResult.data
+
+                    // 处理avatarUrl前缀
+                    println("原始avatarUrl: ${responseUser.avatarUrl}")
+                    val processedAvatarUrl = IpAddressManager.processImageUrl(responseUser.avatarUrl)
+                    println("处理后avatarUrl: $processedAvatarUrl")
+
+                    val finalUser = responseUser.copy(
+                        avatarUrl = processedAvatarUrl,
+                        status = responseUser.status ?: "ACTIVE",
+                        isLogin = user.isLogin
+                    )
+                    dbHelper.addOrUpdateUser(finalUser)
+
+                    // 更新状态
+                    user = finalUser
+                    // 重要：重置avatarUri，让UI显示服务器返回的新头像而不是本地临时选择的图片
+                    avatarUri = null
+
+                    // 显示保存成功提示
+                    withContext(Dispatchers.Main) {
+                        android.widget.Toast.makeText(context, "保存成功", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    // 服务器更新失败，显示错误信息
+                    withContext(Dispatchers.Main) {
+                        val errorMessage = responseResult.message
+                        android.widget.Toast.makeText(context, "保存失败: $errorMessage", android.widget.Toast.LENGTH_LONG).show()
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 // 显示保存失败提示
+                withContext(Dispatchers.Main) {
+                    android.widget.Toast.makeText(context, "网络错误: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                }
             } finally {
                 isSaving = false
             }

@@ -480,6 +480,26 @@ private fun FeatureMenuCard() {
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             )
 
+            // 咨询记录入口
+            ProfileMenuItem(
+                title = "咨询记录",
+                description = "查看您的历史咨询记录",
+                onClick = {
+                    // 跳转到咨询记录页面
+                    context.startActivity(
+                        Intent(context, com.example.ui.features.ConsultationRecordsActivity::class.java)
+                    )
+                }
+            )
+
+            // 分割线
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            )
+
             // 设置入口
             ProfileMenuItem(
                 title = "设置",

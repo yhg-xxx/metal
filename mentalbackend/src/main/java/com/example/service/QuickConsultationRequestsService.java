@@ -18,4 +18,6 @@ public interface QuickConsultationRequestsService extends IService<QuickConsulta
     
     // 根据用户ID查询匹配的咨询师列表
     List<CounselorDTO> getMatchedCounselorsByUserId(Long userId);
-}
+
+    // 根据用户ID获取所有咨询记录
+    List<QuickConsultationRequests> getUserQuickConsultations(Long userId); }

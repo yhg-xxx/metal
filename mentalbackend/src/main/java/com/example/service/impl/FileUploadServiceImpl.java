@@ -54,7 +54,7 @@ public class FileUploadServiceImpl implements FileUploadService {
             String encodedFileName = URLUtil.encode(storedFilename);
             result.put("code", 200);
             result.put("msg", "success");
-            result.put("url", "http://localhost:8080/files/download/" + encodedFileName);
+            result.put("url", "http://localhost:8085/files/download/" + encodedFileName);
             return ResponseEntity.ok(result);
 
         } catch (IOException e) {

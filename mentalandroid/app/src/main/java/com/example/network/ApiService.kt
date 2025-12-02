@@ -12,6 +12,7 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.http.*
 
+
 interface ApiService {
     
     @GET("hello")
@@ -80,6 +81,12 @@ interface ApiService {
     suspend fun getMatchedCounselors(@Query("useId") userId: Long): ApiResponse<List<Counselor>>
     
     /**
+     * 获取用户所有进行过对话的咨询师信息
+     */
+    @GET("api/consultation/messages/user/counselors")
+    suspend fun getUserConversatedCounselors(@Query("userId") userId: Long): ApiResponse<List<Counselor>>
+    
+    /**
      * 获取用户与每个咨询师的最新一条消息
      * 注意：服务器返回直接是消息数组，不是包装在ApiResponse中
      */
@@ -108,5 +115,23 @@ interface ApiService {
      */
     @GET("api/learning-videos/package/{learningPackageId}")
     suspend fun getVideosByLearningPackageId(@Path("learningPackageId") learningPackageId: Long): ApiResponse<List<LearningVideo>>
+    
+    /**
+     * 获取用户的咨询记录
+     */
+    @GET("api/quick-consultation/user/records")
+    suspend fun getUserConsultationRecords(@Query("userId") userId: Int): ApiResponse<List<QuickConsultation>>
+    
+    /**
+     * 创建初始对话
+     * @param userId 用户ID
+     * @param counselorId 咨询师ID
+     * @return ApiResponse<Boolean>
+     */
+    @POST("api/consultation/messages/initial")
+    suspend fun createInitialConversation(
+        @Query("userId") userId: Long,
+        @Query("counselorId") counselorId: Long
+    ): ApiResponse<Boolean>
 
 }
