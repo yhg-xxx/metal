@@ -4,8 +4,7 @@ import com.example.entity.LearningVideos;
 import com.example.service.LearningVideosService;
 import com.example.utils.Result;
 import jakarta.annotation.Resource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,9 +14,8 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/learning-videos")
+@Slf4j
 public class LearningVideosController {
-    
-    private static final Logger logger = LoggerFactory.getLogger(LearningVideosController.class);
     
     @Resource
     private LearningVideosService learningVideosService;
@@ -30,11 +28,11 @@ public class LearningVideosController {
     @GetMapping("/package/{learningPackageId}")
     public Result getVideosByPackageId(@PathVariable Long learningPackageId) {
         try {
-            logger.info("接收获取学习包视频列表请求，学习包ID: {}", learningPackageId);
+            log.info("接收获取学习包视频列表请求，学习包ID: {}", learningPackageId);
             List<LearningVideos> videos = learningVideosService.getVideosByPackageId(learningPackageId);
             return Result.success("获取成功", videos);
         } catch (Exception e) {
-            logger.error("获取学习包视频列表异常: {}", e.getMessage(), e);
+            log.error("获取学习包视频列表异常: {}", e.getMessage(), e);
             return Result.error(500, "获取失败: " + e.getMessage());
         }
     }
@@ -47,7 +45,7 @@ public class LearningVideosController {
     @GetMapping("/{id}")
     public Result getVideoById(@PathVariable Long id) {
         try {
-            logger.info("接收获取视频详情请求，视频ID: {}", id);
+            log.info("接收获取视频详情请求，视频ID: {}", id);
             LearningVideos video = learningVideosService.getVideoById(id);
             if (video == null) {
                 return Result.error(404, "视频不存在");
@@ -55,7 +53,7 @@ public class LearningVideosController {
                 return Result.success("获取成功", video);
             }
         } catch (Exception e) {
-            logger.error("获取视频详情异常: {}", e.getMessage(), e);
+            log.error("获取视频详情异常: {}", e.getMessage(), e);
             return Result.error(500, "获取失败: " + e.getMessage());
         }
     }

@@ -56,9 +56,9 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.RequestBody
 import timber.log.Timber
+import java.security.MessageDigest
+import java.security.NoSuchAlgorithmException
 
 
 @Suppress("DEPRECATION")
@@ -180,215 +180,251 @@ class LoginActivity : ComponentActivity() {
     private fun handleOneKeyLogin(phoneNumber: String) {
         // 首先根据手机号检查用户是否存在
         val existingUser = dbHelper.getUserByPhone(phoneNumber)
+        
         if (existingUser != null) {
-            // 用户已存在，更新登录状态
-            val updatedUser = existingUser.copy(isLogin = true)
-            dbHelper.addOrUpdateUser(updatedUser)
-            
-            // 异步调用API更新用户信息
+            // 本地有记录，执行登录流程
             GlobalScope.launch(Dispatchers.IO) {
                 try {
-                    // 准备用户信息JSON字符串
-                    val userJson = """
-                        {
-                            "username": "${updatedUser.username}",
-                            "password": "${updatedUser.password}",
-                            "phone": "${updatedUser.phone}",
-                            "email": ${if (updatedUser.email != null) "\"${updatedUser.email}\"" else "null"},
-                            "nickname": ${if (updatedUser.nickname != null) "\"${updatedUser.nickname}\"" else "null"},
-                            "gender": "${updatedUser.gender}",
-                            "age": ${updatedUser.age ?: "null"}
+                    // 一键登录可以使用空密码或现有的密码
+                    val password = existingUser.password
+                    // 调用远程登录接口
+                    val loginResponse = apiService.loginUser(
+                        mapOf(
+                            "phone" to phoneNumber,
+                            "password" to password
+                        )
+                    )
+                    
+                    if (loginResponse.isSuccess()) {
+                        // 登录成功，更新本地用户信息
+                        val loggedInUser = loginResponse.data ?: existingUser
+                        // 处理avatarUrl前缀，使用统一的IP地址管理工具
+                        val processedAvatarUrl = IpAddressManager.processImageUrl(loggedInUser.avatarUrl)
+                        
+                        val finalUser = loggedInUser.copy(
+                            isLogin = true,
+                            avatarUrl = processedAvatarUrl,
+                            password = password // 保持现有密码
+                        )
+                        dbHelper.addOrUpdateUser(finalUser)
+                        
+                        runOnUiThread {
+                            navigateToMain()
                         }
-                    """
-                    
-                    val userMediaType = "application/json".toMediaTypeOrNull()
-                    val userRequestBody = userMediaType?.let {
-                        RequestBody.create(it, userJson)
-                    } ?: throw IllegalStateException("Invalid media type")
-                    
-                    // 调用API更新用户
-                    val apiResponse = apiService.updateUser(
-                        phone = phoneNumber,
-                        user = userRequestBody
-                    )
-                    
-                    // 从响应中获取用户数据
-                    val responseUser = apiResponse.data ?: updatedUser
-                    
-                    // 处理avatarUrl前缀，使用统一的IP地址管理工具
-                    val processedAvatarUrl = IpAddressManager.processImageUrl(responseUser.avatarUrl)
-                    
-                    // 更新本地用户信息
-                    val finalUser = responseUser.copy(
-                        isLogin = true,
-                        avatarUrl = processedAvatarUrl
-                    )
-                    dbHelper.addOrUpdateUser(finalUser)
+                    } else {
+                        // 登录失败，可能需要重新注册
+                        runOnUiThread {
+                            Toast.makeText(this@LoginActivity, "登录失败，尝试重新注册", Toast.LENGTH_SHORT).show()
+                        }
+                        // 执行注册流程
+                        registerNewUser(phoneNumber, existingUser.password)
+                    }
                 } catch (e: Exception) {
-                    Timber.e(e, "更新用户API调用失败")
+                    Timber.e(e, "一键登录远程API调用失败")
+                    runOnUiThread {
+                        Toast.makeText(this@LoginActivity, "登录失败，请检查网络连接", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
-            
-            // 跳转到主页
-            navigateToMain()
         } else {
-            // 用户不存在，创建新用户
-            val newUser = User(
-                username = "用户" + (10000..99999).random(),
-                phone = phoneNumber,
-                password = "", // 一键登录可以不设置密码
-                isLogin = true
-            )
-
-            // 先保存到本地数据库
-            dbHelper.addOrUpdateUser(newUser)
-            
-            // 然后异步调用API保存到远端服务器
-            GlobalScope.launch(Dispatchers.IO) {
-                try {
-                    // 准备用户信息JSON字符串
-                    val userJson = """
-                        {
-                            "username": "${newUser.username}",
-                            "password": "${newUser.password}",
-                            "phone": "${newUser.phone}",
-                            "email": null,
-                            "nickname": null,
-                            "gender": "${newUser.gender}",
-                            "age": null
-                        }
-                    """.trimIndent()
-                    
-                    val userMediaType = "application/json".toMediaTypeOrNull()
-                    val userRequestBody = userMediaType?.let {
-                        RequestBody.create(it, userJson)
-                    } ?: throw IllegalStateException("Invalid media type")
-                    
-                    // 调用API创建用户
-                    val apiResponse = apiService.createUser(user = userRequestBody)
-                    
-                    // 从响应中获取用户数据
-                    val responseUser = apiResponse.data ?: newUser
-                    
-                    // 更新本地用户信息
-                    val updatedLocalUser = responseUser.copy(
-                        isLogin = true
-                    )
-                    dbHelper.addOrUpdateUser(updatedLocalUser)
-                } catch (e: Exception) {
-                    Timber.e(e, "创建用户API调用失败")
-                }
-            }
-            
-            navigateToMain()
+            // 本地无记录，执行注册/登录检查流程
+            checkPhoneRegistration(phoneNumber, "") // 一键登录使用空密码
         }
     }
 
     @OptIn(DelicateCoroutinesApi::class)
     private fun handleManualLogin(phone: String, password: String) {
-        val user = dbHelper.checkUser(phone, password)
+        val encryptedPassword = encryptPassword(password)
+        val user = dbHelper.checkUser(phone, encryptedPassword)
+        
         if (user != null) {
-            // 用户存在，更新登录状态
-            val updatedUser = user.copy(isLogin = true)
-            dbHelper.addOrUpdateUser(updatedUser)
-            
-            // 异步调用API更新用户信息
+            // 本地有记录，执行密码登录流程
+            // 调用远程登录接口
             GlobalScope.launch(Dispatchers.IO) {
                 try {
-                    // 准备用户信息JSON字符串
-                    val userJson = """
-                        {
-                            "username": "${updatedUser.username}",
-                            "password": "${updatedUser.password}",
-                            "phone": "${updatedUser.phone}",
-                            "email": ${if (updatedUser.email != null) "\"${updatedUser.email}\"" else "null"},
-                            "nickname": ${if (updatedUser.nickname != null) "\"${updatedUser.nickname}\"" else "null"},
-                            "gender": "${updatedUser.gender}",
-                            "age": ${updatedUser.age ?: "null"}
+                    // 调用远程登录接口
+                    val loginResponse = apiService.loginUser(
+                        mapOf(
+                            "phone" to phone,
+                            "password" to encryptedPassword
+                        )
+                    )
+                    
+                    if (loginResponse.isSuccess()) {
+                        // 登录成功，更新本地用户信息
+                        val loggedInUser = loginResponse.data ?: user
+                        // 处理avatarUrl前缀，使用统一的IP地址管理工具
+                        val processedAvatarUrl = IpAddressManager.processImageUrl(loggedInUser.avatarUrl)
+                        
+                        val finalUser = loggedInUser.copy(
+                            isLogin = true,
+                            avatarUrl = processedAvatarUrl,
+                            password = encryptedPassword // 确保密码是加密后的
+                        )
+                        dbHelper.addOrUpdateUser(finalUser)
+                        
+                        runOnUiThread {
+                            navigateToMain()
                         }
-                    """.trimIndent()
-                    
-                    val userMediaType = "application/json".toMediaTypeOrNull()
-                    val userRequestBody = userMediaType?.let {
-                        RequestBody.create(it, userJson)
-                    } ?: throw IllegalStateException("Invalid media type")
-                    
-                    // 调用API更新用户
-                    val apiResponse = apiService.updateUser(
-                        phone = phone,
-                        user = userRequestBody
-                    )
-                    
-                    // 从响应中获取用户数据
-                    val responseUser = apiResponse.data ?: updatedUser
-                    
-                    // 更新本地用户信息
-                    val finalUser = responseUser.copy(
-                        isLogin = true
-                    )
-                    dbHelper.addOrUpdateUser(finalUser)
+                    } else {
+                        // 登录失败
+                        runOnUiThread {
+                            Toast.makeText(this@LoginActivity, loginResponse.message, Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 } catch (e: Exception) {
-                    Timber.e(e, "更新用户API调用失败")
+                    Timber.e(e, "远程登录API调用失败")
+                    runOnUiThread {
+                        Toast.makeText(this@LoginActivity, "登录失败，请检查网络连接", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
-            
-            navigateToMain()
         } else {
-            // 用户不存在，创建新用户
-            val newUser = User(
-                username = "用户" + (10000..99999).random(),
-                phone = phone,
-                password = password,
-                isLogin = true
-            )
-            
-            // 先保存到本地数据库
-            dbHelper.addOrUpdateUser(newUser)
-            
-            // 然后异步调用API保存到远端服务器
-            GlobalScope.launch(Dispatchers.IO) {
-                try {
-                    // 准备用户信息JSON字符串
-                    val userJson = """
-                        {
-                            "username": "${newUser.username}",
-                            "password": "${newUser.password}",
-                            "phone": "${newUser.phone}",
-                            "email": null,
-                            "nickname": null,
-                            "gender": "${newUser.gender}",
-                            "age": null
+            // 本地无记录，执行注册/登录检查流程
+            checkPhoneRegistration(phone, encryptedPassword)
+        }
+    }
+    
+    /**
+     * 检查手机号在远程数据库中的注册状态
+     */
+    @OptIn(DelicateCoroutinesApi::class)
+    private fun checkPhoneRegistration(phone: String, password: String) {
+        GlobalScope.launch(Dispatchers.IO) {
+            try {
+                // 调用远程手机号注册状态检查接口
+                val checkResponse = apiService.checkPhoneRegistration(phone)
+                
+                if (checkResponse.isSuccess()) {
+                    val exists = checkResponse.data?.get("exists") == true
+                    
+                    if (exists) {
+                        // 手机号已注册，执行登录流程
+                        val loginResponse = apiService.loginUser(
+                            mapOf(
+                                "phone" to phone,
+                                "password" to password
+                            )
+                        )
+                        
+                        if (loginResponse.isSuccess()) {
+                            // 登录成功，保存到本地数据库
+                            val loggedInUser = loginResponse.data
+                            if (loggedInUser != null) {
+                                // 处理avatarUrl前缀，使用统一的IP地址管理工具
+                                val processedAvatarUrl = IpAddressManager.processImageUrl(loggedInUser.avatarUrl)
+                                
+                                val finalUser = loggedInUser.copy(
+                                    isLogin = true,
+                                    avatarUrl = processedAvatarUrl,
+                                    password = password
+                                )
+                                dbHelper.addOrUpdateUser(finalUser)
+                                
+                                runOnUiThread {
+                                    navigateToMain()
+                                }
+                            }
+                        } else {
+                            // 登录失败
+                            runOnUiThread {
+                                Toast.makeText(this@LoginActivity, loginResponse.message, Toast.LENGTH_SHORT).show()
+                            }
                         }
-                    """.trimIndent()
-                    
-                    val userMediaType = "application/json".toMediaTypeOrNull()
-                    val userRequestBody = userMediaType?.let {
-                        RequestBody.create(it, userJson)
-                    } ?: throw IllegalStateException("Invalid media type")
-                    
-                    // 调用API创建用户
-                    val apiResponse = apiService.createUser(user = userRequestBody)
-                    
-                    // 从响应中获取用户数据
-                    val responseUser = apiResponse.data ?: newUser
-                    
-                    // 更新本地用户信息
-                    val updatedLocalUser = responseUser.copy(
-                        isLogin = true
-                    )
-                    dbHelper.addOrUpdateUser(updatedLocalUser)
-                } catch (e: Exception) {
-                    Timber.e(e, "创建用户API调用失败")
+                    } else {
+                        // 手机号未注册，执行注册流程
+                        registerNewUser(phone, password)
+                    }
+                } else {
+                    // 检查失败
+                    runOnUiThread {
+                        Toast.makeText(this@LoginActivity, checkResponse.message, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "检查手机号注册状态API调用失败")
+                runOnUiThread {
+                    Toast.makeText(this@LoginActivity, "检查失败，请检查网络连接", Toast.LENGTH_SHORT).show()
                 }
             }
-            
-            navigateToMain()
+        }
+    }
+    
+    /**
+     * 注册新用户
+     */
+    @OptIn(DelicateCoroutinesApi::class)
+    private fun registerNewUser(phone: String, password: String) {
+        val username = "用户" + phone.substring(phone.length - 6) // 使用手机号后6位作为用户名
+        
+        GlobalScope.launch(Dispatchers.IO) {
+            try {
+                // 调用远程注册接口
+                val newUser = User(
+                    phone = phone,
+                    password = password,
+                    username = username
+                )
+                val registerResponse = apiService.registerUser(newUser)
+                
+                if (registerResponse.isSuccess()) {
+                        // 注册成功，保存到本地数据库
+                        val registeredUser = registerResponse.data
+                        if (registeredUser != null) {
+                            // 处理avatarUrl前缀，使用统一的IP地址管理工具
+                            val processedAvatarUrl = IpAddressManager.processImageUrl(registeredUser.avatarUrl)
+                            
+                            val finalUser = registeredUser.copy(
+                                isLogin = true,
+                                avatarUrl = processedAvatarUrl,
+                                password = password
+                            )
+                            dbHelper.addOrUpdateUser(finalUser)
+                        
+                        runOnUiThread {
+                            navigateToMain()
+                        }
+                    }
+                } else {
+                    // 注册失败
+                    runOnUiThread {
+                        Toast.makeText(this@LoginActivity, registerResponse.message, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "远程注册API调用失败")
+                runOnUiThread {
+                    Toast.makeText(this@LoginActivity, "注册失败，请检查网络连接", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
     private fun navigateToMain() {
         startActivity(Intent(this, MainActivity::class.java))
         finish()
+    }
+    
+    /**
+     * MD5加密函数
+     */
+    private fun encryptPassword(password: String): String {
+        return try {
+            val md = MessageDigest.getInstance("MD5")
+            val hashBytes = md.digest(password.toByteArray())
+            val stringBuilder = StringBuilder()
+            for (byte in hashBytes) {
+                val hex = Integer.toHexString(0xFF and byte.toInt())
+                if (hex.length == 1) {
+                    stringBuilder.append('0')
+                }
+                stringBuilder.append(hex)
+            }
+            stringBuilder.toString()
+        } catch (e: NoSuchAlgorithmException) {
+            Timber.e("MD5加密失败: ${e.message}")
+            password // 加密失败时返回原密码
+        }
     }
 }
 
@@ -409,12 +445,24 @@ fun LoginScreen(
     var isAgreed by remember { mutableStateOf(false) }
     var showManualLogin by remember { mutableStateOf(isManualLogin) }
     var showHistoryPhones by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
     val context = LocalContext.current
     // 添加对话框显示状态
     var showAgreementDialog by remember { mutableStateOf(false) }
 
     // 如果有设备号码，自动填充（脱敏）
     val displayedPhoneNumber = devicePhoneNumber ?: ""
+    
+    // 检查本地是否有当前手机号的记录
+    val dbHelper = remember { DatabaseHelper(context) }
+    val hasLocalRecord = remember(phoneNumber) {
+        if (phoneNumber.isNotEmpty()) {
+            dbHelper.getUserByPhone(phoneNumber) != null
+        } else {
+            displayedPhoneNumber.isNotEmpty() && dbHelper.getUserByPhone(displayedPhoneNumber) != null
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -481,12 +529,16 @@ fun LoginScreen(
             }
             
             // 手动登录表单
-            if (displayedPhoneNumber.isEmpty() || showManualLogin) {
+            if (displayedPhoneNumber.isEmpty() || showManualLogin || hasLocalRecord) {
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 OutlinedTextField(
                     value = phoneNumber,
-                    onValueChange = { phoneNumber = it },
+                    onValueChange = { 
+                        phoneNumber = it 
+                        // 清除错误信息
+                        errorMessage = ""
+                    },
                     label = { Text("手机号") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -496,19 +548,36 @@ fun LoginScreen(
                 
                 OutlinedTextField(
                     value = password,
-                    onValueChange = { password = it },
+                    onValueChange = { 
+                        password = it 
+                        // 清除错误信息
+                        errorMessage = ""
+                    },
                     label = { Text("密码") },
                     modifier = Modifier.fillMaxWidth(),
                     visualTransformation = PasswordVisualTransformation(),
                     shape = RoundedCornerShape(12.dp)
                 )
                 
+                // 显示错误信息
+                if (errorMessage.isNotEmpty()) {
+                    Text(
+                        text = errorMessage,
+                        color = Color.Red,
+                        fontSize = 12.sp,
+                        modifier = Modifier.align(Alignment.Start)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 Button(
                     onClick = {
                         if (isAgreed) {
+                            isLoading = true
                             onManualLogin(phoneNumber, password)
+                            isLoading = false
                         } else {
                             // 设置对话框显示状态为true
                             showAgreementDialog = true
@@ -521,14 +590,21 @@ fun LoginScreen(
                     colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer
                     ),
-                    // 只检查手机号和密码是否为空，不检查协议是否勾选
-                    enabled = phoneNumber.isNotEmpty() && password.isNotEmpty()
+                    enabled = phoneNumber.isNotEmpty() && password.isNotEmpty() && !isLoading
                 ) {
-                    Text(
-                        text = "登录",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    if (isLoading) {
+                        Text(
+                            text = "登录中...",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    } else {
+                        Text(
+                            text = "登录",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
             
@@ -542,6 +618,8 @@ fun LoginScreen(
                     color = Color(0xFF5A67D8),
                     modifier = Modifier.clickable {
                         showManualLogin = !showManualLogin
+                        // 清除错误信息
+                        errorMessage = ""
                     }
                 )
             }

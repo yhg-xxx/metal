@@ -6,7 +6,6 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.Manifest
 import android.annotation.SuppressLint
@@ -20,15 +19,17 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import coil.compose.AsyncImage
 import com.example.network.WebSocketManager
 import com.example.ui.theme.MentalTheme
@@ -41,9 +42,6 @@ import android.os.Handler
 import android.os.Looper
 import androidx.compose.material.icons.automirrored.filled.CallMissed
 
-
-
-@Suppress("DEPRECATION")
 class VideoCallActivity : ComponentActivity() {
     companion object {
         const val EXTRA_USER_ID = "userId"
@@ -52,8 +50,11 @@ class VideoCallActivity : ComponentActivity() {
         const val EXTRA_INCOMING_CALL = "incomingCall"
         const val EXTRA_CALLER_NAME = "callerName"
         const val EXTRA_CALLER_AVATAR = "callerAvatar"
+        const val PERMISSION_REQUEST_CODE = 1001
 
-        fun start(context: Context, userId: Long, counselorId: Int, callId: String, isIncomingCall: Boolean = false, callerName: String? = null, callerAvatar: String? = null) {
+        fun start(context: Context, userId: Long, counselorId: Int, callId: String,
+                  isIncomingCall: Boolean = false, callerName: String? = null,
+                  callerAvatar: String? = null) {
             val intent = Intent(context, VideoCallActivity::class.java).apply {
                 putExtra(EXTRA_USER_ID, userId)
                 putExtra(EXTRA_COUNSELOR_ID, counselorId)
@@ -73,7 +74,8 @@ class VideoCallActivity : ComponentActivity() {
     private var localVideoTrack: VideoTrack? = null
     private var localAudioTrack: AudioTrack? = null
     private var videoCapturer: CameraVideoCapturer? = null
-    private val eglBase = EglBase.create()
+    private var eglBase: EglBase? = null
+    private var surfaceTextureHelper: SurfaceTextureHelper? = null
 
     // SurfaceViewRenderers
     private lateinit var localVideoView: SurfaceViewRenderer
@@ -84,14 +86,29 @@ class VideoCallActivity : ComponentActivity() {
     private var currentUserId: Long = 0L
     private var currentCounselorId: Int = 0
     private var isIncomingCall: Boolean = false
-    
+    private var isCallActive: Boolean = false
+    private var isCallEnded: Boolean = false
+
     // 权限相关
-    private val CAMERA_PERMISSION_CODE = 1001
-    private val AUDIO_PERMISSION_CODE = 1002
     private val requiredPermissions = arrayOf(
         Manifest.permission.CAMERA,
         Manifest.permission.RECORD_AUDIO
     )
+
+    // 权限请求启动器已替换为直接调用requestPermissions方法
+
+    // WebSocket监听器
+    private val webRTCSignalListener = { signalMessage: WebSocketManager.WebRTCSignalMessage ->
+        runOnUiThread {
+            handleWebRTCSignal(signalMessage)
+        }
+    }
+
+    private val webRTCStatusListener = { statusMessage: WebSocketManager.WebRTCStatusMessage ->
+        runOnUiThread {
+            handleWebRTCStatus(statusMessage)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -101,12 +118,15 @@ class VideoCallActivity : ComponentActivity() {
         currentCounselorId = intent.getIntExtra(EXTRA_COUNSELOR_ID, 0)
         currentCallId = intent.getStringExtra(EXTRA_CALL_ID) ?: ""
         isIncomingCall = intent.getBooleanExtra(EXTRA_INCOMING_CALL, false)
-        
+
+        Timber.i("VideoCallActivity启动: userId=$currentUserId, counselorId=$currentCounselorId, callId=$currentCallId")
+
+        // 注册WebSocket监听器
+        WebSocketManager.getInstance().addWebRTCSignalListener(webRTCSignalListener)
+        WebSocketManager.getInstance().addWebRTCStatusListener(webRTCStatusListener)
+
         // 请求必要的权限
         requestPermissionsIfNeeded()
-
-        // 初始化WebRTC
-        initializeWebRTC()
 
         val callerName = intent.getStringExtra(EXTRA_CALLER_NAME)
         val callerAvatar = intent.getStringExtra(EXTRA_CALLER_AVATAR)
@@ -120,8 +140,6 @@ class VideoCallActivity : ComponentActivity() {
                     isIncomingCall = isIncomingCall,
                     callerName = callerName,
                     callerAvatar = callerAvatar,
-                    localVideoView = localVideoView,
-                    remoteVideoView = remoteVideoView,
                     onBackPress = { finish() },
                     onAcceptCall = { acceptCall() },
                     onRejectCall = { rejectCall() },
@@ -131,7 +149,8 @@ class VideoCallActivity : ComponentActivity() {
                 )
             }
         }
-        // 如果是去电（主动呼叫），自动接受通话
+
+        // 如果是去电（主动呼叫），延迟自动接受通话
         if (!isIncomingCall) {
             Handler(Looper.getMainLooper()).postDelayed({
                 acceptCall()
@@ -139,192 +158,266 @@ class VideoCallActivity : ComponentActivity() {
         }
     }
 
+    // 处理收到的WebRTC信令消息
+    private fun handleWebRTCSignal(signalMessage: WebSocketManager.WebRTCSignalMessage) {
+        // 确保callId匹配
+        if (signalMessage.callId != currentCallId) {
+            Timber.w("CallId不匹配, 期望: $currentCallId, 实际: ${signalMessage.callId}")
+            return
+        }
+
+        when (signalMessage.type) {
+            "offer" -> handleRemoteOffer(signalMessage.data)
+            "answer" -> handleRemoteAnswer(signalMessage.data)
+            "ice-candidate" -> handleRemoteIceCandidate(signalMessage.data)
+        }
+    }
+
+    private fun handleWebRTCStatus(statusMessage: WebSocketManager.WebRTCStatusMessage) {
+        // 确保callId匹配
+        if (statusMessage.callId != currentCallId) {
+            Timber.w("CallId不匹配, 期望: $currentCallId, 实际: ${statusMessage.callId}")
+            return
+        }
+
+        when (statusMessage.status) {
+            "accepted" -> isCallActive = true
+            "rejected" -> {
+                runOnUiThread {
+                    Toast.makeText(this, "通话被对方拒绝", Toast.LENGTH_SHORT).show()
+                }
+                Handler(Looper.getMainLooper()).postDelayed({
+                    cleanup()
+                    finish()
+                }, 2000)
+            }
+            "ended" -> {
+                runOnUiThread {
+                    Toast.makeText(this, "通话已结束", Toast.LENGTH_SHORT).show()
+                }
+                Handler(Looper.getMainLooper()).postDelayed({
+                    cleanup()
+                    finish()
+                }, 2000)
+            }
+            "missed" -> {
+                runOnUiThread {
+                    Toast.makeText(this, "通话未接听", Toast.LENGTH_SHORT).show()
+                }
+                Handler(Looper.getMainLooper()).postDelayed({
+                    cleanup()
+                    finish()
+                }, 2000)
+            }
+        }
+    }
+
     private fun initializeWebRTC() {
-        // 初始化PeerConnectionFactory
-        PeerConnectionFactory.initialize(
-            PeerConnectionFactory.InitializationOptions
-                .builder(this)
-                .setEnableInternalTracer(true)
-                .createInitializationOptions()
-        )
-
-        val options = PeerConnectionFactory.Options()
-        peerConnectionFactory = PeerConnectionFactory.builder()
-            .setOptions(options)
-            .createPeerConnectionFactory()
-
-        // 初始化视频视图
-        localVideoView = SurfaceViewRenderer(this).apply {
-            init(eglBase.eglBaseContext, null)
-            setMirror(true)
-            setEnableHardwareScaler(true)
-            setZOrderMediaOverlay(true)
+        if (::peerConnectionFactory.isInitialized) {
+            return
         }
 
-        remoteVideoView = SurfaceViewRenderer(this).apply {
-            init(eglBase.eglBaseContext, null)
-            setEnableHardwareScaler(true)
-        }
+        try {
+            // 初始化PeerConnectionFactory
+            PeerConnectionFactory.initialize(
+                PeerConnectionFactory.InitializationOptions
+                    .builder(this)
+                    .setEnableInternalTracer(true)
+                    .createInitializationOptions()
+            )
 
-        Timber.d("WebRTC initialized successfully")
+            val options = PeerConnectionFactory.Options()
+            peerConnectionFactory = PeerConnectionFactory.builder()
+                .setOptions(options)
+                .createPeerConnectionFactory()
+
+            // 初始化EGL
+            eglBase = EglBase.create()
+
+            // 初始化视频视图
+            localVideoView = SurfaceViewRenderer(this).apply {
+                init(eglBase?.eglBaseContext, null)
+                setMirror(true)
+                setEnableHardwareScaler(true)
+                setZOrderMediaOverlay(true)
+            }
+
+            remoteVideoView = SurfaceViewRenderer(this).apply {
+                init(eglBase?.eglBaseContext, null)
+                setEnableHardwareScaler(true)
+            }
+
+        } catch (e: Exception) {
+            Timber.e(e, "WebRTC初始化失败")
+            runOnUiThread {
+                Toast.makeText(this, "视频功能初始化失败: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     private fun createPeerConnection() {
-        val iceServers = listOf(
-            PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
-            PeerConnection.IceServer.builder("stun:stun1.l.google.com:19302").createIceServer(),
-            PeerConnection.IceServer.builder("stun:stun2.l.google.com:19302").createIceServer()
-        )
-
-        val rtcConfig = PeerConnection.RTCConfiguration(iceServers).apply {
-            tcpCandidatePolicy = PeerConnection.TcpCandidatePolicy.DISABLED
-            bundlePolicy = PeerConnection.BundlePolicy.MAXBUNDLE
-            rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE
-            continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
-            keyType = PeerConnection.KeyType.ECDSA
-
+        if (peerConnection != null) {
+            Timber.d("PeerConnection已经存在")
+            return
         }
 
-        peerConnection = peerConnectionFactory.createPeerConnection(
-            rtcConfig,
-            object : PeerConnection.Observer {
-                override fun onIceCandidate(candidate: IceCandidate) {
-                    Timber.d("生成ICE候选: ${candidate.sdpMid} - ${candidate.sdpMLineIndex}")
-                    sendIceCandidate(candidate)
-                }
+        try {
+            val iceServers = listOf(
+                PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
+                PeerConnection.IceServer.builder("stun:stun1.l.google.com:19302").createIceServer(),
+                PeerConnection.IceServer.builder("stun:stun2.l.google.com:19302").createIceServer()
+            )
 
-                override fun onAddStream(stream: MediaStream) {
-                    Timber.d("收到远程流: , 视频轨道: ${stream.videoTracks.size}, 音频轨道: ${stream.audioTracks.size}")
-                    runOnUiThread {
-                        val videoTracks = stream.videoTracks
-                        if (videoTracks.isNotEmpty()) {
-                            val remoteVideoTrack = videoTracks[0]
-                            remoteVideoTrack.addSink(remoteVideoView)
-                            remoteVideoTrack.setEnabled(true)
-                            Timber.d("远程视频轨道已设置: ${remoteVideoTrack.id()}")
+            val rtcConfig = PeerConnection.RTCConfiguration(iceServers).apply {
+                tcpCandidatePolicy = PeerConnection.TcpCandidatePolicy.DISABLED
+                bundlePolicy = PeerConnection.BundlePolicy.MAXBUNDLE
+                rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE
+                continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
+                keyType = PeerConnection.KeyType.ECDSA
+            }
 
-                            // 检查轨道状态
-                            Timber.d("远程视频轨道状态: enabled=${remoteVideoTrack.enabled()}")
+            peerConnection = peerConnectionFactory.createPeerConnection(
+                rtcConfig,
+                object : PeerConnection.Observer {
+                    override fun onIceCandidate(candidate: IceCandidate) {
+                        sendIceCandidate(candidate)
+                    }
+
+                    override fun onAddStream(stream: MediaStream) {
+                        runOnUiThread {
+                            stream.videoTracks.firstOrNull()?.let { remoteVideoTrack ->
+                                remoteVideoTrack.addSink(remoteVideoView)
+                                remoteVideoTrack.setEnabled(true)
+                            }
                         }
                     }
-                }
 
-                override fun onAddTrack(receiver: RtpReceiver, streams: Array<out MediaStream>) {
-                    Timber.d("通过onAddTrack收到远程轨道: ${receiver.track()?.id()}")
-                    runOnUiThread {
-                        val track = receiver.track()
-                        if (track is VideoTrack) {
-                            track.addSink(remoteVideoView)
-                            track.setEnabled(true)
-                            Timber.d("视频轨道已通过onAddTrack设置: ${track.id()}")
-                        }
-                    }
-                }
-
-                override fun onTrack(transceiver: RtpTransceiver) {
-                    Timber.d("通过onTrack收到媒体: ${transceiver.mediaType}")
-                    runOnUiThread {
-                        if (transceiver.mediaType == MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO) {
-                            val track = transceiver.receiver.track()
+                    override fun onAddTrack(receiver: RtpReceiver, streams: Array<out MediaStream>) {
+                        runOnUiThread {
+                            val track = receiver.track()
                             if (track is VideoTrack) {
                                 track.addSink(remoteVideoView)
                                 track.setEnabled(true)
-                                Timber.d("视频轨道已通过onTrack设置: ${track.id()}")
                             }
                         }
                     }
-                }
 
-                override fun onConnectionChange(newState: PeerConnection.PeerConnectionState) {
-                    Timber.d("PeerConnection状态改变: $newState")
-                    runOnUiThread {
-                        when (newState) {
-                            PeerConnection.PeerConnectionState.CONNECTED -> {
-                                Toast.makeText(this@VideoCallActivity, "视频通话连接已建立", Toast.LENGTH_SHORT).show()
-                                checkMediaTracks()
+                    override fun onTrack(transceiver: RtpTransceiver) {
+                        runOnUiThread {
+                            if (transceiver.mediaType == MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO) {
+                                val track = transceiver.receiver.track()
+                                if (track is VideoTrack) {
+                                    track.addSink(remoteVideoView)
+                                    track.setEnabled(true)
+                                }
                             }
-                            PeerConnection.PeerConnectionState.FAILED -> {
-                                Toast.makeText(this@VideoCallActivity, "视频连接失败", Toast.LENGTH_SHORT).show()
-                            }
-                            else -> {}
                         }
                     }
-                }
 
-                override fun onSignalingChange(state: PeerConnection.SignalingState?) {
-                    Timber.d("Signaling state: $state")
-                }
-
-                override fun onIceConnectionChange(state: PeerConnection.IceConnectionState?) {
-                    Timber.d("ICE connection state: $state")
-                    runOnUiThread {
-                        when (state) {
-                            PeerConnection.IceConnectionState.CONNECTED -> {
-                                Toast.makeText(this@VideoCallActivity, "视频通话已连接", Toast.LENGTH_SHORT).show()
+                    override fun onConnectionChange(newState: PeerConnection.PeerConnectionState) {
+                        runOnUiThread {
+                            when (newState) {
+                                PeerConnection.PeerConnectionState.CONNECTED -> {
+                                    isCallActive = true
+                                    Toast.makeText(this@VideoCallActivity, "视频通话连接已建立", Toast.LENGTH_SHORT).show()
+                                }
+                                PeerConnection.PeerConnectionState.FAILED -> {
+                                    Toast.makeText(this@VideoCallActivity, "视频连接失败", Toast.LENGTH_SHORT).show()
+                                }
+                                PeerConnection.PeerConnectionState.DISCONNECTED -> {
+                                    Toast.makeText(this@VideoCallActivity, "视频连接断开", Toast.LENGTH_SHORT).show()
+                                }
+                                PeerConnection.PeerConnectionState.CLOSED -> {
+                                    Toast.makeText(this@VideoCallActivity, "视频连接已关闭", Toast.LENGTH_SHORT).show()
+                                }
+                                else -> {}
                             }
-                            PeerConnection.IceConnectionState.DISCONNECTED -> {
-                                Toast.makeText(this@VideoCallActivity, "视频连接断开", Toast.LENGTH_SHORT).show()
-                            }
-                            PeerConnection.IceConnectionState.FAILED -> {
-                                Toast.makeText(this@VideoCallActivity, "视频连接失败", Toast.LENGTH_SHORT).show()
-                            }
-                            else -> {}
                         }
                     }
-                }
 
-                override fun onIceConnectionReceivingChange(receiving: Boolean) {}
-                override fun onIceGatheringChange(state: PeerConnection.IceGatheringState?) {}
-                override fun onIceCandidatesRemoved(candidates: Array<out IceCandidate>?) {}
-                override fun onRemoveStream(stream: MediaStream?) {}
-                override fun onDataChannel(channel: DataChannel?) {}
-                override fun onRenegotiationNeeded() {}
+                    override fun onSignalingChange(state: PeerConnection.SignalingState?) {}
+
+                    override fun onIceConnectionChange(state: PeerConnection.IceConnectionState?) {
+                        runOnUiThread {
+                            when (state) {
+                                PeerConnection.IceConnectionState.CONNECTED -> {
+                                    Toast.makeText(this@VideoCallActivity, "视频通话已连接", Toast.LENGTH_SHORT).show()
+                                }
+                                PeerConnection.IceConnectionState.DISCONNECTED -> {
+                                    Toast.makeText(this@VideoCallActivity, "视频连接断开", Toast.LENGTH_SHORT).show()
+                                }
+                                PeerConnection.IceConnectionState.FAILED -> {
+                                    Toast.makeText(this@VideoCallActivity, "视频连接失败", Toast.LENGTH_SHORT).show()
+                                }
+                                else -> {}
+                            }
+                        }
+                    }
+
+                    override fun onIceConnectionReceivingChange(receiving: Boolean) {}
+                    override fun onIceGatheringChange(state: PeerConnection.IceGatheringState?) {}
+                    override fun onIceCandidatesRemoved(candidates: Array<out IceCandidate>?) {}
+                    override fun onRemoveStream(stream: MediaStream?) {}
+                    override fun onDataChannel(channel: DataChannel?) {}
+                    override fun onRenegotiationNeeded() {}
+                }
+            )
+
+
+
+        } catch (e: Exception) {
+            Timber.e(e, "创建PeerConnection失败")
+            runOnUiThread {
+                Toast.makeText(this, "创建连接失败: ${e.message}", Toast.LENGTH_LONG).show()
             }
-        )
-
-        Timber.d("PeerConnection created: ${peerConnection != null}")
+        }
     }
 
-    // 改进的 startLocalVideo 方法
     private fun startLocalVideo() {
         try {
-            if (!hasRequiredPermissions()) {
-                Timber.e("缺少相机或麦克风权限")
-                return
+            // 停止当前视频流
+            videoCapturer?.stopCapture()
+            videoCapturer?.dispose()
+            videoCapturer = null
+            localVideoTrack?.dispose()
+            localVideoTrack = null
+            localAudioTrack?.dispose()
+            localAudioTrack = null
+
+            // 创建新的视频源
+            val videoSource = peerConnectionFactory.createVideoSource(false)
+
+            // 创建新的摄像头捕获器
+            videoCapturer = createCameraCapturer()
+            if (videoCapturer != null && surfaceTextureHelper != null) {
+                videoCapturer?.initialize(surfaceTextureHelper, applicationContext, videoSource.capturerObserver)
+                try {
+                    videoCapturer?.startCapture(1280, 720, 30)
+                } catch (e: Exception) {
+                    Timber.e(e, "启动相机捕获失败，尝试降低分辨率")
+                    // 尝试降低分辨率
+                    videoCapturer?.startCapture(640, 480, 30)
+                }
             }
 
-            // 创建视频源
-            val videoSource = peerConnectionFactory.createVideoSource(false)
-            val surfaceTextureHelper = SurfaceTextureHelper.create("CaptureThread", eglBase.eglBaseContext)
-
-            // 创建摄像头捕获器
-            videoCapturer = createCameraCapturer()
-            videoCapturer?.initialize(surfaceTextureHelper, applicationContext, videoSource.capturerObserver)
-            videoCapturer?.startCapture(1280, 720, 30)
-
-            // 创建视频轨道
+            // 创建新的视频轨道
             localVideoTrack = peerConnectionFactory.createVideoTrack("local_video", videoSource)
             localVideoTrack?.addSink(localVideoView)
             localVideoTrack?.setEnabled(true)
 
-            // 创建音频源和轨道
+            // 创建新的音频源和轨道
             val audioSource = peerConnectionFactory.createAudioSource(MediaConstraints())
             localAudioTrack = peerConnectionFactory.createAudioTrack("local_audio", audioSource)
             localAudioTrack?.setEnabled(true)
 
-            // 重要：在PeerConnection创建后立即添加轨道
-            if (peerConnection != null) {
-                localVideoTrack?.let { videoTrack ->
-                    val sender = peerConnection?.addTrack(videoTrack, listOf("local_stream"))
-                    Timber.d("本地视频轨道已添加到PeerConnection, sender: ${sender != null}")
-                }
-                localAudioTrack?.let { audioTrack ->
-                    val sender = peerConnection?.addTrack(audioTrack, listOf("local_stream"))
-                    Timber.d("本地音频轨道已添加到PeerConnection, sender: ${sender != null}")
-                }
+            // 添加轨道到PeerConnection
+            localVideoTrack?.let { videoTrack ->
+                peerConnection?.addTrack(videoTrack, listOf("local_stream"))
             }
 
-            Timber.d("本地视频启动完成")
+            localAudioTrack?.let { audioTrack ->
+                peerConnection?.addTrack(audioTrack, listOf("local_stream"))
+            }
 
         } catch (e: Exception) {
             Timber.e(e, "启动本地视频失败")
@@ -375,67 +468,28 @@ class VideoCallActivity : ComponentActivity() {
                 callId = currentCallId
             )
         } catch (e: Exception) {
-            Timber.e(e, "Failed to send ICE candidate")
+            Timber.e(e, "发送ICE候选失败")
         }
     }
 
     private fun requestPermissionsIfNeeded() {
-        val missingPermissions = requiredPermissions.filter {
-            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
-        }
-
-        if (missingPermissions.isNotEmpty()) {
-            ActivityCompat.requestPermissions(
-                this,
-                missingPermissions.toTypedArray(),
-                CAMERA_PERMISSION_CODE
-            )
+        if (!hasRequiredPermissions()) {
+            requestPermissions(requiredPermissions, PERMISSION_REQUEST_CODE)
         } else {
-            // 如果已经有权限，立即初始化摄像头
             initializeCameraIfReady()
         }
     }
 
     private fun initializeCameraIfReady() {
-        if (hasRequiredPermissions() && ::peerConnectionFactory.isInitialized) {
-            // 延迟一点确保UI已经准备好
-            Handler(Looper.getMainLooper()).postDelayed({
-                startLocalVideo()
-            }, 500)
-        }
+        // 在有需要时才初始化摄像头
+        // 这里不立即启动，等待用户接受通话或主动发起通话时再启动
     }
-    
-    @Deprecated("Deprecated in Java")
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        
-        when (requestCode) {
-            CAMERA_PERMISSION_CODE, AUDIO_PERMISSION_CODE -> {
-                val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
-                if (!allGranted) {
-                    Toast.makeText(
-                        this,
-                        "无法获取相机或麦克风权限，视频通话功能可能无法正常使用",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            }
-        }
-    }
-    
+
     private fun hasRequiredPermissions(): Boolean {
-        return requiredPermissions.all {
-            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
-        }
+        return requiredPermissions.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }
     }
 
     fun acceptCall() {
-        Timber.d("Accepting call: $currentCallId")
-
         try {
             // 检查权限
             if (!hasRequiredPermissions()) {
@@ -452,7 +506,7 @@ class VideoCallActivity : ComponentActivity() {
             // 创建PeerConnection
             createPeerConnection()
 
-            // 启动本地视频（这会创建并添加媒体轨道）
+            // 启动本地视频
             startLocalVideo()
 
             // 发送接受通话状态
@@ -464,81 +518,31 @@ class VideoCallActivity : ComponentActivity() {
                 callId = currentCallId
             )
 
-            // 如果是来电，需要等待对方的offer
-            if (isIncomingCall) {
-                Timber.d("Waiting for remote offer...")
-                // 这里会在收到offer时处理
-            } else {
-                // 如果是去电，创建并发送offer
-                createAndSendOffer()
-            }
-
             // 更新UI状态
             runOnUiThread {
                 Toast.makeText(this, "正在建立视频连接...", Toast.LENGTH_SHORT).show()
             }
 
+            isCallActive = true
+
         } catch (e: Exception) {
-            Timber.e(e, "Failed to accept call")
+            Timber.e(e, "接受通话失败")
             runOnUiThread {
                 Toast.makeText(this, "接受通话失败: ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
     }
 
-    // 改进的 createAndSendOffer 方法
-    private fun createAndSendOffer() {
-        val mediaConstraints = MediaConstraints().apply {
-            mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
-            mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
-        }
-
-        peerConnection?.createOffer(object : SdpObserver {
-            override fun onCreateSuccess(desc: SessionDescription) {
-                Timber.d("Offer创建成功: ${desc.type}")
-
-                peerConnection?.setLocalDescription(object : SdpObserver {
-                    override fun onSetSuccess() {
-                        Timber.d("本地描述设置成功")
-
-                        val offerJson = JSONObject().apply {
-                            put("type", desc.type.canonicalForm())
-                            put("sdp", desc.description)
-                        }
-
-                        WebSocketManager.getInstance().sendWebRTCSignal(
-                            senderId = currentUserId,
-                            receiverId = currentCounselorId,
-                            senderType = "user",
-                            type = "offer",
-                            data = offerJson.toString(),
-                            callId = currentCallId
-                        )
-                        Timber.d("Offer发送完成")
-                    }
-                    override fun onSetFailure(error: String) {
-                        Timber.e("设置本地描述失败: $error")
-                    }
-                    override fun onCreateSuccess(p0: SessionDescription?) {}
-                    override fun onCreateFailure(error: String) {
-                        Timber.e("创建本地描述失败: $error")
-                    }
-                }, desc)
-            }
-            override fun onSetSuccess() {}
-            override fun onCreateFailure(error: String) {
-                Timber.e("创建offer失败: $error")
-            }
-            override fun onSetFailure(error: String) {
-                Timber.e("设置offer失败: $error")
-            }
-        }, mediaConstraints)
-    }
-
+    // createAndSendOffer方法已被合并到acceptCall方法中
 
     fun handleRemoteOffer(offerData: String) {
         try {
-            Timber.d("Handling remote offer: $offerData")
+            // 在去电场景下，本地已发送offer，忽略远程offer以避免状态冲突
+            if (!isIncomingCall) {
+                Timber.w("去电场景下忽略远程offer，避免状态冲突")
+                return
+            }
+            
             val offerJson = JSONObject(offerData)
             val sdp = SessionDescription(
                 SessionDescription.Type.fromCanonicalForm(offerJson.getString("type")),
@@ -552,9 +556,9 @@ class VideoCallActivity : ComponentActivity() {
 
             peerConnection?.setRemoteDescription(object : SdpObserver {
                 override fun onSetSuccess() {
-                    Timber.d("Remote offer set successfully")
+                    // 只在调试时保留，生产环境可以移除
+                    // Timber.d("Remote offer设置成功")
 
-                    // 创建answer时也使用正确的媒体约束
                     val mediaConstraints = MediaConstraints().apply {
                         mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
                         mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
@@ -577,43 +581,44 @@ class VideoCallActivity : ComponentActivity() {
                                         data = answerJson.toString(),
                                         callId = currentCallId
                                     )
-                                    Timber.d("Answer sent successfully")
+                                    // 只在调试时保留，生产环境可以移除
+                                    // Timber.d("Answer发送成功")
                                 }
                                 override fun onSetFailure(error: String) {
-                                    Timber.e("Failed to set local description for answer: $error")
+                                    Timber.e("设置本地描述失败: $error")
                                 }
                                 override fun onCreateSuccess(p0: SessionDescription?) {}
                                 override fun onCreateFailure(error: String) {
-                                    Timber.e("Failed to create local description for answer: $error")
+                                    Timber.e("创建本地描述失败: $error")
                                 }
                             }, desc)
                         }
                         override fun onSetSuccess() {}
                         override fun onCreateFailure(error: String) {
-                            Timber.e("Failed to create answer: $error")
+                            Timber.e("创建answer失败: $error")
                         }
                         override fun onSetFailure(error: String) {
-                            Timber.e("Failed to set answer: $error")
+                            Timber.e("设置answer失败: $error")
                         }
                     }, mediaConstraints)
                 }
                 override fun onSetFailure(error: String) {
-                    Timber.e("Failed to set remote description: $error")
+                    Timber.e("设置远程描述失败: $error")
                 }
                 override fun onCreateSuccess(p0: SessionDescription?) {}
                 override fun onCreateFailure(error: String) {
-                    Timber.e("Failed to create remote description: $error")
+                    Timber.e("创建远程描述失败: $error")
                 }
             }, sdp)
 
         } catch (e: Exception) {
-            Timber.e(e, "Failed to handle remote offer")
+            Timber.e(e, "处理远程offer失败")
         }
     }
 
     fun handleRemoteAnswer(answerData: String) {
         try {
-            Timber.d("Handling remote answer: $answerData")
+            // Timber.d("处理远程answer: $answerData")
             val answerJson = JSONObject(answerData)
             val sdp = SessionDescription(
                 SessionDescription.Type.fromCanonicalForm(answerJson.getString("type")),
@@ -622,55 +627,25 @@ class VideoCallActivity : ComponentActivity() {
 
             peerConnection?.setRemoteDescription(object : SdpObserver {
                 override fun onSetSuccess() {
-                    Timber.d("Remote answer set successfully")
-                    // 连接建立后检查媒体轨道状态
-                    checkMediaTracks()
+                    // 只在调试时保留，生产环境可以移除
+                    // Timber.d("Remote answer设置成功")
                 }
                 override fun onSetFailure(error: String) {
-                    Timber.e("Failed to set remote answer: $error")
+                    Timber.e("设置远程answer失败: $error")
                 }
                 override fun onCreateSuccess(p0: SessionDescription?) {}
                 override fun onCreateFailure(error: String) {
-                    Timber.e("Failed to create remote answer: $error")
+                    Timber.e("创建远程answer失败: $error")
                 }
             }, sdp)
         } catch (e: Exception) {
-            Timber.e(e, "Failed to handle remote answer")
-        }
-    }
-
-    // 添加媒体轨道状态检查方法
-    // 添加媒体轨道状态检查
-    private fun checkMediaTracks() {
-        runOnUiThread {
-            peerConnection?.let { pc ->
-                val receivers = pc.receivers
-                val senders = pc.senders
-
-                Timber.d("媒体轨道状态检查:")
-                Timber.d("发送器数量: ${senders.size}")
-                Timber.d("接收器数量: ${receivers.size}")
-
-                receivers.forEachIndexed { index, receiver ->
-                    val track = receiver.track()
-                    if (track != null) {
-                        Timber.d("接收器 $index: ${track.kind()} - ${track.enabled()}")
-                    }
-                }
-
-                senders.forEachIndexed { index, sender ->
-                    val track = sender.track()
-                    if (track != null) {
-                        Timber.d("发送器 $index: ${track.kind()} - ${track.enabled()}")
-                    }
-                }
-            }
+            Timber.e(e, "处理远程answer失败")
         }
     }
 
     fun handleRemoteIceCandidate(candidateData: String) {
         try {
-            Timber.d("Handling remote ICE candidate: $candidateData")
+            // Timber.d("处理远程ICE candidate: $candidateData")
             val candidateJson = JSONObject(candidateData)
             val iceCandidate = IceCandidate(
                 candidateJson.getString("sdpMid"),
@@ -680,12 +655,12 @@ class VideoCallActivity : ComponentActivity() {
 
             peerConnection?.addIceCandidate(iceCandidate)
         } catch (e: Exception) {
-            Timber.e(e, "Failed to handle remote ICE candidate")
+            Timber.e(e, "处理远程ICE candidate失败")
         }
     }
 
     fun rejectCall() {
-        Timber.d("Rejecting call: $currentCallId")
+        // Timber.d("拒绝通话: $currentCallId")
 
         try {
             WebSocketManager.getInstance().sendWebRTCStatus(
@@ -695,25 +670,40 @@ class VideoCallActivity : ComponentActivity() {
                 status = "rejected",
                 callId = currentCallId
             )
-            finish()
         } catch (e: Exception) {
-            Timber.e(e, "Failed to reject call")
+            Timber.e(e, "发送拒绝通话状态失败")
         }
+
+        cleanup()
+        finish()
     }
 
     fun endCall() {
-        Timber.d("Ending call: $currentCallId")
+        if (isCallEnded) return
+
+        // Timber.d("结束通话: $currentCallId")
+        isCallEnded = true
 
         try {
-            WebSocketManager.getInstance().sendWebRTCStatus(
-                senderId = currentUserId,
-                receiverId = currentCounselorId,
-                senderType = "user",
-                status = "ended",
-                callId = currentCallId
-            )
+            if (isCallActive) {
+                WebSocketManager.getInstance().sendWebRTCStatus(
+                    senderId = currentUserId,
+                    receiverId = currentCounselorId,
+                    senderType = "user",
+                    status = "ended",
+                    callId = currentCallId
+                )
+            } else {
+                WebSocketManager.getInstance().sendWebRTCStatus(
+                    senderId = currentUserId,
+                    receiverId = currentCounselorId,
+                    senderType = "user",
+                    status = "missed",
+                    callId = currentCallId
+                )
+            }
         } catch (e: Exception) {
-            Timber.e(e, "Failed to send end call status")
+            Timber.e(e, "发送结束通话状态失败")
         }
 
         cleanup()
@@ -721,68 +711,78 @@ class VideoCallActivity : ComponentActivity() {
     }
 
     fun toggleVideo() {
-        localVideoTrack?.setEnabled(localVideoTrack?.enabled() != true)
-        Timber.d("Video toggled: ${localVideoTrack?.enabled()}")
+        localVideoTrack?.let {
+            val newState = !it.enabled()
+            it.setEnabled(newState)
+            // Timber.d("视频状态切换: $newState")
+        }
     }
 
     fun toggleMic() {
-        localAudioTrack?.setEnabled(localAudioTrack?.enabled() != true)
-        Timber.d("Mic toggled: ${localAudioTrack?.enabled()}")
+        localAudioTrack?.let {
+            val newState = !it.enabled()
+            it.setEnabled(newState)
+            // Timber.d("麦克风状态切换: $newState")
+        }
     }
 
     private fun cleanup() {
-        peerConnection?.close()
-        peerConnection = null
+        // Timber.d("开始清理WebRTC资源")
 
-        videoCapturer?.stopCapture()
-        videoCapturer?.dispose()
-        videoCapturer = null
+        try {
+            // 停止视频捕获
+            videoCapturer?.stopCapture()
+            videoCapturer?.dispose()
+            videoCapturer = null
 
-        localVideoView.release()
-        remoteVideoView.release()
+            // 停止SurfaceTextureHelper
+            surfaceTextureHelper?.stopListening()
+            surfaceTextureHelper = null
 
-        peerConnectionFactory.dispose()
+            // 释放视频轨道
+            localVideoTrack?.dispose()
+            localVideoTrack = null
+
+            // 释放音频轨道
+            localAudioTrack?.dispose()
+            localAudioTrack = null
+
+            // 关闭PeerConnection
+            peerConnection?.close()
+            peerConnection?.dispose()
+            peerConnection = null
+
+            // 释放视频视图
+            try {
+                localVideoView.release()
+                remoteVideoView.release()
+            } catch (e: Exception) {
+                Timber.e(e, "释放视频视图失败")
+            }
+
+            // 释放EGL
+            eglBase?.release()
+            eglBase = null
+
+            // 移除WebSocket监听器
+            WebSocketManager.getInstance().removeWebRTCSignalListener(webRTCSignalListener)
+            WebSocketManager.getInstance().removeWebRTCStatusListener(webRTCStatusListener)
+
+            // Timber.d("WebRTC资源清理完成")
+
+        } catch (e: Exception) {
+            Timber.e(e, "清理WebRTC资源时出错")
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        // 安全地释放WebRTC资源
-        try {
-            // 停止本地视频捕获
-            videoCapturer?.stopCapture()
-            videoCapturer?.dispose()
-            
-            // 停止音频轨道
-            try {
-                localAudioTrack?.setEnabled(false)
-                localAudioTrack?.dispose()
-            } catch (e: Exception) {
-                Timber.e(e, "Error stopping audio track")
-            }
-            
-            // 停止视频轨道
-            try {
-                localVideoTrack?.setEnabled(false)
-                localVideoTrack?.dispose()
-            } catch (e: Exception) {
-                Timber.e(e, "Error stopping video track")
-            }
-            
-            // 关闭并释放PeerConnection
-            peerConnection?.close()
-            peerConnection?.dispose()
-            
-            // 释放工厂和EGL资源
-            peerConnectionFactory.dispose()
-            eglBase?.release()
-            
-            // 释放视频视图
-            localVideoView.release()
-            remoteVideoView.release()
-            
-            Timber.d("WebRTC resources released successfully")
-        } catch (e: Exception) {
-            Timber.e(e, "Error releasing WebRTC resources")
+
+        // 如果通话尚未结束，自动结束
+        if (!isCallEnded) {
+            endCall()
+        } else {
+            cleanup()
         }
     }
 }
@@ -796,8 +796,6 @@ fun VideoCallScreen(
     isIncomingCall: Boolean,
     callerName: String?,
     callerAvatar: String?,
-    localVideoView: SurfaceViewRenderer,
-    remoteVideoView: SurfaceViewRenderer,
     onBackPress: () -> Unit,
     onAcceptCall: () -> Unit,
     onRejectCall: () -> Unit,
@@ -806,109 +804,84 @@ fun VideoCallScreen(
     onToggleMic: () -> Unit
 ) {
     val context = LocalContext.current
-    val activity = context as? VideoCallActivity
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     // 通话状态
-    val callState = remember {
-        mutableStateOf(
-            if (isIncomingCall) CallState.RINGING
-            else CallState.CONNECTING
-        )
-    }
+    val callState = remember { mutableStateOf(
+        if (isIncomingCall) CallState.RINGING
+        else CallState.CONNECTING
+    ) }
 
     // 本地视频开关
     val isVideoEnabled = remember { mutableStateOf(true) }
     // 本地麦克风开关
     val isMicEnabled = remember { mutableStateOf(true) }
-
     // 通话时间计时器
     val callTimer = rememberCallTimer()
 
-    // 监听WebRTC信令和状态
+    // 初始化WebRTC视图
+    val localVideoView = remember {
+        SurfaceViewRenderer(context).apply {
+            // 视图会在Activity中初始化
+        }
+    }
+
+    val remoteVideoView = remember {
+        SurfaceViewRenderer(context).apply {
+            // 视图会在Activity中初始化
+        }
+    }
+
+    // 监听Activity生命周期
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> {
+                    // Activity恢复时重新连接
+                    Timber.d("Activity恢复，重新检查WebRTC连接")
+                }
+                Lifecycle.Event.ON_PAUSE -> {
+                    // Activity暂停时暂停视频
+                    Timber.d("Activity暂停")
+                }
+                else -> {}
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            callTimer.stop()
+        }
+    }
+
+    // 监听WebSocket状态
     DisposableEffect(Unit) {
         val webSocketManager = WebSocketManager.getInstance()
 
-        try {
-            // 安全地连接WebSocket，避免重复连接
-            // 检查是否需要设置自定义的消息处理
-            webSocketManager.connect(
-                userId = userId,
-                counselorId = counselorId,
-                onMessageReceived = {}, // 不处理普通消息
-                onError = { errorMsg ->
-                    Timber.e("WebSocket error: $errorMsg")
-                },
-                onWebRTCSignalReceived = { signalMessage ->
-                    Timber.d("Received WebRTC signal: ${signalMessage.type}")
+        // 确保WebSocket已连接
+        val scope = CoroutineScope(Dispatchers.Main)
+        scope.launch {
+            delay(500) // 等待Activity初始化完成
 
-                    when (signalMessage.type) {
-                        "offer" -> {
-                            if (callState.value == CallState.RINGING && signalMessage.callId == callId) {
-                                activity?.handleRemoteOffer(signalMessage.data)
-                                callState.value = CallState.ACTIVE
-                                callTimer.start()
-                            }
-                        }
-                        "answer" -> {
-                            if (callState.value == CallState.CONNECTING && signalMessage.callId == callId) {
-                                activity?.handleRemoteAnswer(signalMessage.data)
-                                callState.value = CallState.ACTIVE
-                                callTimer.start()
-                            }
-                        }
-                        "ice-candidate" -> {
-                            activity?.handleRemoteIceCandidate(signalMessage.data)
-                        }
-                    }
-                },
-                onWebRTCStatusReceived = { statusMessage ->
-                    Timber.d("Received WebRTC status: ${statusMessage.status}")
-
-                    when (statusMessage.status) {
-                        "accepted" -> {
-                            if (statusMessage.callId == callId) {
-                                callState.value = CallState.ACTIVE
-                                callTimer.start()
-                            }
-                        }
-                        "rejected" -> {
-                            if (statusMessage.callId == callId) {
-                                callState.value = CallState.REJECTED
-                                callTimer.stop()
-                            }
-                        }
-                        "ended" -> {
-                            if (statusMessage.callId == callId) {
-                                callState.value = CallState.ENDED
-                                callTimer.stop()
-                            }
-                        }
-                        else -> {}
-                    }
+            try {
+                // 检查WebSocket连接状态
+                if (!webSocketManager.isConnected()) {
+                    Timber.d("WebSocket未连接，尝试重新连接")
+                    webSocketManager.reconnect()
                 }
-            )
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to setup WebRTC listeners")
+
+                Timber.d("WebSocket连接状态: ${webSocketManager.isConnected()}")
+            } catch (e: Exception) {
+                Timber.e(e, "检查WebSocket连接失败")
+            }
         }
 
         onDispose {
+            scope.cancel()
             callTimer.stop()
-            
-            if (callState.value == CallState.ACTIVE) {
-                try {
-                    webSocketManager.sendWebRTCStatus(
-                        senderId = userId,
-                        receiverId = counselorId,
-                        senderType = "user",
-                        status = "ended",
-                        callId = callId
-                    )
-                } catch (e: Exception) {
-                    Timber.e(e, "Failed to send end call status")
-                }
-            }
-            
-            // 注意：不要在通话结束时断开WebSocket连接，让上层管理连接生命周期
+            Timber.d("VideoCallScreen销毁")
         }
     }
 
@@ -919,10 +892,12 @@ fun VideoCallScreen(
             .background(Color.Black)
     ) {
         // 远程视频（大窗口）
-        AndroidView(
-            factory = { remoteVideoView },
-            modifier = Modifier.fillMaxSize()
-        )
+        if (callState.value == CallState.ACTIVE) {
+            AndroidView(
+                factory = { remoteVideoView },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
 
         // 本地视频（小窗口）
         if (callState.value == CallState.ACTIVE) {
@@ -941,7 +916,11 @@ fun VideoCallScreen(
                 IncomingCallView(
                     callerName = callerName ?: "未知用户",
                     callerAvatar = callerAvatar,
-                    onAccept = onAcceptCall,
+                    onAccept = {
+                        callState.value = CallState.CONNECTING
+                        onAcceptCall()
+                        callTimer.start()
+                    },
                     onReject = onRejectCall
                 )
             }
@@ -991,28 +970,29 @@ class CallTimer {
     private val callDuration = mutableIntStateOf(0)
     private val handler = Handler(Looper.getMainLooper())
     private var runnable: Runnable? = null
-    
+
     val duration: MutableState<Int> get() = callDuration
-    
+
     fun start() {
         // 先清理可能存在的计时器
         stop()
-        
+
         runnable = object : Runnable {
             override fun run() {
                 callDuration.intValue = callDuration.intValue + 1
                 handler.postDelayed(this, 1000)
             }
         }
-        
+
         runnable?.let { handler.post(it) }
     }
-    
+
     fun stop() {
-        runnable?.let { 
+        runnable?.let {
             handler.removeCallbacks(it)
             runnable = null
         }
+        callDuration.intValue = 0
     }
 }
 
@@ -1020,14 +1000,14 @@ class CallTimer {
 @Composable
 fun rememberCallTimer(): CallTimer {
     val callTimer = remember { CallTimer() }
-    
+
     DisposableEffect(Unit) {
         // 确保组件销毁时停止计时器
         onDispose {
             callTimer.stop()
         }
     }
-    
+
     return callTimer
 }
 

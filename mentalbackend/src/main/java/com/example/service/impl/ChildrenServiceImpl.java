@@ -5,8 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.entity.Children;
 import com.example.mapper.ChildrenMapper;
 import com.example.service.ChildrenService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,9 +15,8 @@ import java.util.List;
  * 孩子信息服务实现类
  */
 @Service
+@Slf4j
 public class ChildrenServiceImpl extends ServiceImpl<ChildrenMapper, Children> implements ChildrenService {
-
-    private static final Logger log = LoggerFactory.getLogger(ChildrenServiceImpl.class);
 
 
 

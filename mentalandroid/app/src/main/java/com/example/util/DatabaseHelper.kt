@@ -15,7 +15,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
 
     companion object {
         private const val DATABASE_NAME = "mental_health.db"
-        private const val DATABASE_VERSION = 3 // 升级数据库版本以支持任务表
+        private const val DATABASE_VERSION = 4 // 升级数据库版本以去掉id自增限制
         private const val TABLE_USER = "user"
         private const val TABLE_TASK = "task"
         
@@ -53,7 +53,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         // 创建用户表
         val CREATE_USER_TABLE = (
             "CREATE TABLE $TABLE_USER ("
-            + "$COLUMN_ID INTEGER PRIMARY KEY AUTOINCREMENT,"
+            + "$COLUMN_ID INTEGER PRIMARY KEY,"
             + "$COLUMN_USERNAME TEXT NOT NULL,"
             + "$COLUMN_PHONE TEXT NOT NULL,"
             + "$COLUMN_PASSWORD TEXT NOT NULL,"
@@ -104,7 +104,45 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
                 + ")"
             )
             db?.execSQL(CREATE_TASK_TABLE)
-        } else {
+        }
+        
+        // 如果是从版本3升级到版本4，修改用户表去掉id自增限制
+        if (oldVersion < 4) {
+            // 创建临时表，去掉AUTOINCREMENT限制
+            val CREATE_TEMP_USER_TABLE = (
+                "CREATE TABLE " + TABLE_USER + "_temp ("
+                + "$COLUMN_ID INTEGER PRIMARY KEY,"
+                + "$COLUMN_USERNAME TEXT NOT NULL,"
+                + "$COLUMN_PHONE TEXT NOT NULL,"
+                + "$COLUMN_PASSWORD TEXT NOT NULL,"
+                + "$COLUMN_EMAIL TEXT,"
+                + "$COLUMN_NICKNAME TEXT,"
+                + "$COLUMN_AVATAR_URL TEXT,"
+                + "$COLUMN_GENDER TEXT DEFAULT 'UNKNOWN',"
+                + "$COLUMN_AGE INTEGER,"
+                + "$COLUMN_STATUS TEXT DEFAULT 'ACTIVE',"
+                + "$COLUMN_CREATED_TIME TEXT DEFAULT CURRENT_TIMESTAMP,"
+                + "$COLUMN_UPDATED_TIME TEXT DEFAULT CURRENT_TIMESTAMP,"
+                + "$COLUMN_IS_LOGIN INTEGER DEFAULT 0,"
+                + "UNIQUE($COLUMN_USERNAME),"
+                + "UNIQUE($COLUMN_PHONE),"
+                + "UNIQUE($COLUMN_EMAIL))"
+            )
+            db?.execSQL(CREATE_TEMP_USER_TABLE)
+            
+            // 复制数据到临时表
+            db?.execSQL("INSERT INTO " + TABLE_USER + "_temp SELECT * FROM " + TABLE_USER)
+            
+            // 删除旧表
+            db?.execSQL("DROP TABLE IF EXISTS $TABLE_USER")
+            
+            // 重命名临时表为原表名
+            db?.execSQL("ALTER TABLE " + TABLE_USER + "_temp RENAME TO " + TABLE_USER)
+        }
+        
+        if (oldVersion >= 3 && oldVersion < 4) {
+            // 版本3到4的升级已经处理，无需额外操作
+        } else if (oldVersion >= 4) {
             // 简单处理：删除旧表并创建新表
             // 实际应用中可能需要更复杂的数据迁移策略
             db?.execSQL("DROP TABLE IF EXISTS $TABLE_USER")
@@ -149,27 +187,14 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
             }
             contentValues.put(COLUMN_UPDATED_TIME, currentTime)
 
-            // 先检查用户是否存在（根据ID或手机号）
-            val existingUser = if (user.id > 0) {
-                // 如果有ID，先按ID查找
-                getUserById(user.id)
-            } else {
-                // 否则按手机号查找
-                getUserByPhone(user.phone)
-            }
+            // 直接根据电话号码查找用户，确保本地与远程用户数据正确匹配
+            var existingUser = getUserByPhone(user.phone)
 
             result = if (existingUser != null) {
                 // 更新现有用户
-                val whereClause = if (user.id > 0) {
-                    "$COLUMN_ID = ?"
-                } else {
-                    "$COLUMN_PHONE = ?"
-                }
-                val whereArgs = if (user.id > 0) {
-                    arrayOf(user.id.toString())
-                } else {
-                    arrayOf(user.phone)
-                }
+                // 始终使用手机号作为更新条件，确保本地与远程用户数据正确匹配
+                val whereClause = "$COLUMN_PHONE = ?"
+                val whereArgs = arrayOf(user.phone)
 
                 // 重要：在更新时不要包含ID字段，避免主键冲突
                 if (contentValues.containsKey(COLUMN_ID)) {
@@ -203,56 +228,9 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         return result
     }
 
-    // 添加根据ID获取用户的方法
-    fun getUserById(id: Int): User? {
-        val db = this.readableDatabase
-        val cursor: Cursor? = db.rawQuery(
-            "SELECT * FROM $TABLE_USER WHERE $COLUMN_ID = ?",
-            arrayOf(id.toString())
-        )
 
-        return cursor?.use {
-            if (it.moveToFirst()) {
-                extractUserFromCursor(it)
-            } else {
-                null
-            }
-        }
-    }
 
-    // 提取公共的用户对象创建逻辑
-    private fun extractUserFromCursor(cursor: Cursor): User {
-        val id = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_ID))
-        val username = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_USERNAME))
-        val phone = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PHONE))
-        val password = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PASSWORD))
-        val email = if (cursor.getColumnIndex(COLUMN_EMAIL) != -1) cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_EMAIL)) else null
-        val nickname = if (cursor.getColumnIndex(COLUMN_NICKNAME) != -1) cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_NICKNAME)) else null
-        val avatarUrl = if (cursor.getColumnIndex(COLUMN_AVATAR_URL) != -1) cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_AVATAR_URL)) else null
-        val gender = if (cursor.getColumnIndex(COLUMN_GENDER) != -1) cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_GENDER)) else "UNKNOWN"
-        val ageColumnIndex = cursor.getColumnIndex(COLUMN_AGE)
-        val age = if (ageColumnIndex != -1 && !cursor.isNull(ageColumnIndex)) cursor.getInt(ageColumnIndex) else null
-        val status = if (cursor.getColumnIndex(COLUMN_STATUS) != -1) cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_STATUS)) else "ACTIVE"
-        val createdTime = if (cursor.getColumnIndex(COLUMN_CREATED_TIME) != -1) cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CREATED_TIME)) else null
-        val updatedTime = if (cursor.getColumnIndex(COLUMN_UPDATED_TIME) != -1) cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_UPDATED_TIME)) else null
-        val isLogin = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_IS_LOGIN)) == 1
 
-        return User(
-            id = id,
-            username = username,
-            phone = phone,
-            password = password,
-            email = email,
-            nickname = nickname,
-            avatarUrl = avatarUrl,
-            gender = gender,
-            age = age,
-            status = status,
-            createdTime = createdTime,
-            updatedTime = updatedTime,
-            isLogin = isLogin
-        )
-    }
 
     // 检查用户是否存在
     fun checkUser(phone: String, password: String): User? {
@@ -487,23 +465,7 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         }
         return null
     }
-    
-    // 获取未完成的任务
-    fun getIncompleteTasks(): List<Task> {
-        val tasks = mutableListOf<Task>()
-        val db = this.readableDatabase
-        val cursor = db.rawQuery(
-            "SELECT * FROM $TABLE_TASK WHERE $TASK_COLUMN_IS_COMPLETED = 0 ORDER BY $TASK_COLUMN_PRIORITY DESC, $TASK_COLUMN_CREATE_TIME ASC",
-            null
-        )
-        
-        cursor.use {
-            while (it.moveToNext()) {
-                tasks.add(cursorToTask(it))
-            }
-        }
-        return tasks
-    }
+
     
     // 将游标转换为Task对象
     private fun cursorToTask(cursor: Cursor): Task {

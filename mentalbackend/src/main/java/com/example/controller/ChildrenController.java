@@ -4,9 +4,8 @@ import com.example.entity.Children;
 import com.example.service.ChildrenService;
 import com.example.utils.Result;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,14 +15,13 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/children")
+@Slf4j
 public class ChildrenController {
 
-    private static final Logger log = LoggerFactory.getLogger(ChildrenController.class);
-
-    @Autowired
+    @Resource
     private ChildrenService childrenService;
 
-    @Autowired
+    @Resource
     private ObjectMapper objectMapper;
 
     /**

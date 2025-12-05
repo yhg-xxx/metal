@@ -134,4 +134,28 @@ interface ApiService {
         @Query("counselorId") counselorId: Long
     ): ApiResponse<Boolean>
 
+    /**
+     * 手机号注册状态检查接口
+     * @param phone 待查询的手机号
+     * @return ApiResponse<Map<String, Boolean>> 返回包含exists字段的Map
+     */
+    @GET("api/users/check/{phone}")
+    suspend fun checkPhoneRegistration(@Path("phone") phone: String): ApiResponse<Map<String, Boolean>>
+
+    /**
+     * 用户注册接口
+     * @param user 用户注册信息
+     * @return ApiResponse<User> 返回注册成功的用户信息
+     */
+    @POST("api/users/register")
+    suspend fun registerUser(@Body user: User): ApiResponse<User>
+
+    /**
+     * 用户登录接口
+     * @param loginRequest 包含手机号和密码的登录请求
+     * @return ApiResponse<User> 返回登录成功的用户信息
+     */
+    @POST("api/users/login")
+    suspend fun loginUser(@Body loginRequest: Map<String, String>): ApiResponse<User>
+
 }

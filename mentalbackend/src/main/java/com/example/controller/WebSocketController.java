@@ -3,8 +3,9 @@ package com.example.controller;
 import com.example.entity.ConsultationMessages;
 import com.example.service.ConsultationMessagesService;
 import jakarta.annotation.Resource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -20,9 +21,8 @@ import java.time.LocalDateTime;
  * 3. 错误处理和状态管理
  */
 @Controller
+@Slf4j
 public class WebSocketController {
-
-    private static final Logger log = LoggerFactory.getLogger(WebSocketController.class);
 
     @Resource
     private SimpMessagingTemplate messagingTemplate;
@@ -103,49 +103,21 @@ public class WebSocketController {
     /**
      * 消息DTO类，用于接收客户端发送的消息
      */
+    @Setter
+    @Getter
     public static class MessageDTO {
         private Long senderId;
         private Long receiverId;
         private String senderType; // USER, COUNSELOR
         private String content;
 
-        // Getters and Setters
-        public Long getSenderId() {
-            return senderId;
-        }
-
-        public void setSenderId(Long senderId) {
-            this.senderId = senderId;
-        }
-
-        public Long getReceiverId() {
-            return receiverId;
-        }
-
-        public void setReceiverId(Long receiverId) {
-            this.receiverId = receiverId;
-        }
-
-        public String getSenderType() {
-            return senderType;
-        }
-
-        public void setSenderType(String senderType) {
-            this.senderType = senderType;
-        }
-
-        public String getContent() {
-            return content;
-        }
-
-        public void setContent(String content) {
-            this.content = content;
-        }
     }
 
     /**
      * 聊天消息类，用于传输消息
      */
+    @Setter
+    @Getter
     public static class ChatMessage {
         private Long senderId;
         private Long receiverId;
@@ -153,51 +125,13 @@ public class WebSocketController {
         private String content;
         private LocalDateTime timestamp;
 
-        // Getters and Setters
-        public Long getSenderId() {
-            return senderId;
-        }
-
-        public void setSenderId(Long senderId) {
-            this.senderId = senderId;
-        }
-
-        public Long getReceiverId() {
-            return receiverId;
-        }
-
-        public void setReceiverId(Long receiverId) {
-            this.receiverId = receiverId;
-        }
-
-        public String getSenderType() {
-            return senderType;
-        }
-
-        public void setSenderType(String senderType) {
-            this.senderType = senderType;
-        }
-
-        public String getContent() {
-            return content;
-        }
-
-        public void setContent(String content) {
-            this.content = content;
-        }
-
-        public LocalDateTime getTimestamp() {
-            return timestamp;
-        }
-
-        public void setTimestamp(LocalDateTime timestamp) {
-            this.timestamp = timestamp;
-        }
     }
 
     /**
      * 错误DTO类，用于发送错误消息
      */
+    @Setter
+    @Getter
     public static class ErrorDTO {
         private String message;
 
@@ -205,18 +139,13 @@ public class WebSocketController {
             this.message = message;
         }
 
-        public String getMessage() {
-            return message;
-        }
-
-        public void setMessage(String message) {
-            this.message = message;
-        }
     }
 
     /**
      * WebRTC信令消息DTO类，用于处理视频通话的信令交换
      */
+    @Setter
+    @Getter
     public static class WebRTCSignalDTO {
         private Long senderId;
         private Long receiverId;
@@ -225,59 +154,13 @@ public class WebSocketController {
         private String data; // 信令数据，包含SDP或ICE候选信息
         private String callId; // 通话ID，用于标识特定的通话会话
 
-        // Getters and Setters
-        public Long getSenderId() {
-            return senderId;
-        }
-
-        public void setSenderId(Long senderId) {
-            this.senderId = senderId;
-        }
-
-        public Long getReceiverId() {
-            return receiverId;
-        }
-
-        public void setReceiverId(Long receiverId) {
-            this.receiverId = receiverId;
-        }
-
-        public String getSenderType() {
-            return senderType;
-        }
-
-        public void setSenderType(String senderType) {
-            this.senderType = senderType;
-        }
-
-        public String getType() {
-            return type;
-        }
-
-        public void setType(String type) {
-            this.type = type;
-        }
-
-        public String getData() {
-            return data;
-        }
-
-        public void setData(String data) {
-            this.data = data;
-        }
-
-        public String getCallId() {
-            return callId;
-        }
-
-        public void setCallId(String callId) {
-            this.callId = callId;
-        }
     }
 
     /**
      * WebRTC通话状态DTO类，用于处理通话状态通知
      */
+    @Setter
+    @Getter
     public static class WebRTCStatusDTO {
         private Long senderId;
         private Long receiverId;
@@ -286,54 +169,6 @@ public class WebSocketController {
         private String callId;
         private LocalDateTime timestamp;
 
-        // Getters and Setters
-        public Long getSenderId() {
-            return senderId;
-        }
-
-        public void setSenderId(Long senderId) {
-            this.senderId = senderId;
-        }
-
-        public Long getReceiverId() {
-            return receiverId;
-        }
-
-        public void setReceiverId(Long receiverId) {
-            this.receiverId = receiverId;
-        }
-
-        public String getSenderType() {
-            return senderType;
-        }
-
-        public void setSenderType(String senderType) {
-            this.senderType = senderType;
-        }
-
-        public String getStatus() {
-            return status;
-        }
-
-        public void setStatus(String status) {
-            this.status = status;
-        }
-
-        public String getCallId() {
-            return callId;
-        }
-
-        public void setCallId(String callId) {
-            this.callId = callId;
-        }
-
-        public LocalDateTime getTimestamp() {
-            return timestamp;
-        }
-
-        public void setTimestamp(LocalDateTime timestamp) {
-            this.timestamp = timestamp;
-        }
     }
 
     /**
@@ -343,22 +178,30 @@ public class WebSocketController {
     @MessageMapping("/webrtc.signal")
     public void handleWebRTCSignal(@Payload WebRTCSignalDTO signalDTO) {
         try {
-            log.info("收到WebRTC信令消息: 类型={}, 发送者={}({}), 接收者={}, 通话ID={}",
+            log.info("收到WebRTC信令消息: 类型={}, 发送者={}({}), 接收者={}, 通话ID={}, 数据长度={}",
                     signalDTO.getType(), signalDTO.getSenderId(), signalDTO.getSenderType(),
-                    signalDTO.getReceiverId(), signalDTO.getCallId());
+                    signalDTO.getReceiverId(), signalDTO.getCallId(),
+                    signalDTO.getData() != null ? signalDTO.getData().length() : 0);
 
-            // 根据发送者类型确定接收者类型（用户↔咨询师）- 忽略大小写比较
-            String receiverType = "USER".equalsIgnoreCase(signalDTO.getSenderType()) ? "COUNSELOR" : "USER";
-            String destination = "/queue/webrtc/" + receiverType.toLowerCase() + "/" + signalDTO.getReceiverId();
+            // 重要修复：确保callId不为空
+            if (signalDTO.getCallId() == null || signalDTO.getCallId().isEmpty()) {
+                signalDTO.setCallId("call_" + System.currentTimeMillis());
+            }
+
+            // 根据接收者类型确定路由路径 - 重要：直接使用DTO中的接收者类型
+            String receiverType = signalDTO.getSenderType().equalsIgnoreCase("USER") ? "counselor" : "user";
+            String destination = "/queue/webrtc/" + receiverType + "/" + signalDTO.getReceiverId();
+
+            log.info("WebRTC信令转发到: {}", destination);
 
             // 转发信令消息给接收者
             messagingTemplate.convertAndSend(destination, signalDTO);
-            log.info("WebRTC信令已转发到: {}", destination);
+            log.info("WebRTC信令已转发完成");
 
         } catch (Exception e) {
             log.error("处理WebRTC信令消息异常: {}", e.getMessage(), e);
             // 发送错误消息给发送者
-            ErrorDTO errorDTO = new ErrorDTO("WebRTC信令处理失败，请稍后重试");
+            ErrorDTO errorDTO = new ErrorDTO("WebRTC信令处理失败: " + e.getMessage());
             messagingTemplate.convertAndSend("/queue/errors/" + signalDTO.getSenderType().toLowerCase() + "/" + signalDTO.getSenderId(), errorDTO);
         }
     }
@@ -374,21 +217,29 @@ public class WebSocketController {
                     statusDTO.getStatus(), statusDTO.getSenderId(), statusDTO.getSenderType(),
                     statusDTO.getReceiverId(), statusDTO.getCallId());
 
+            // 确保callId不为空
+            if (statusDTO.getCallId() == null || statusDTO.getCallId().isEmpty()) {
+                statusDTO.setCallId("call_" + System.currentTimeMillis());
+            }
+
             // 设置时间戳
             statusDTO.setTimestamp(LocalDateTime.now());
 
-            // 根据发送者类型确定接收者类型（用户↔咨询师）- 忽略大小写比较
-            String receiverType = "USER".equalsIgnoreCase(statusDTO.getSenderType()) ? "COUNSELOR" : "USER";
-            String destination = "/queue/webrtc/status/" + receiverType.toLowerCase() + "/" + statusDTO.getReceiverId();
+            // 重要修复：状态消息也需要路由到正确的接收者
+            // 这里的发送者是发起状态通知的人，接收者是另一方
+            String receiverType = statusDTO.getSenderType().equalsIgnoreCase("USER") ? "counselor" : "user";
+            String destination = "/queue/webrtc/status/" + receiverType + "/" + statusDTO.getReceiverId();
+
+            log.info("WebRTC状态转发到: {}", destination);
 
             // 转发状态消息给接收者
             messagingTemplate.convertAndSend(destination, statusDTO);
-            log.info("WebRTC状态已转发到: {}", destination);
+            log.info("WebRTC状态已转发完成");
 
         } catch (Exception e) {
             log.error("处理WebRTC状态消息异常: {}", e.getMessage(), e);
             // 发送错误消息给发送者
-            ErrorDTO errorDTO = new ErrorDTO("WebRTC状态处理失败，请稍后重试");
+            ErrorDTO errorDTO = new ErrorDTO("WebRTC状态处理失败: " + e.getMessage());
             messagingTemplate.convertAndSend("/queue/errors/" + statusDTO.getSenderType().toLowerCase() + "/" + statusDTO.getSenderId(), errorDTO);
         }
     }

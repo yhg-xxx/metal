@@ -5,8 +5,7 @@ import com.example.entity.LearningPackages;
 import com.example.mapper.LearningPackagesMapper;
 import com.example.service.LearningPackagesService;
 import jakarta.annotation.Resource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -15,9 +14,8 @@ import java.util.List;
  * 学习包服务实现类
  */
 @Service
+@Slf4j
 public class LearningPackagesServiceImpl extends ServiceImpl<LearningPackagesMapper, LearningPackages> implements LearningPackagesService {
-
-    private static final Logger log = LoggerFactory.getLogger(LearningPackagesServiceImpl.class);
 
     @Resource
     private LearningPackagesMapper learningPackagesMapper;

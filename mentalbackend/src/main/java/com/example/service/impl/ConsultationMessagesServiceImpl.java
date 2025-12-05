@@ -6,8 +6,7 @@ import com.example.entity.ConsultationMessages;
 import com.example.mapper.ConsultationMessagesMapper;
 import com.example.service.ConsultationMessagesService;
 import jakarta.annotation.Resource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,9 +18,8 @@ import java.util.List;
  * 咨询对话记录服务实现类
  */
 @Service
+@Slf4j
 public class ConsultationMessagesServiceImpl extends ServiceImpl<ConsultationMessagesMapper, ConsultationMessages> implements ConsultationMessagesService {
-
-    private static final Logger log = LoggerFactory.getLogger(ConsultationMessagesServiceImpl.class);
 
     @Resource
     private ConsultationMessagesMapper consultationMessagesMapper;

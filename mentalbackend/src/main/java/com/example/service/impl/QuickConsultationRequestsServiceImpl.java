@@ -17,8 +17,7 @@ import com.example.service.QuickConsultationRequestsService;
 
 import jakarta.annotation.Resource;
 import org.json.JSONArray;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -27,9 +26,8 @@ import org.springframework.util.StringUtils;
  * 快速咨询申请服务实现类
  */
 @Service
+@Slf4j
 public class QuickConsultationRequestsServiceImpl extends ServiceImpl<QuickConsultationRequestsMapper, QuickConsultationRequests> implements QuickConsultationRequestsService {
-
-    private static final Logger log = LoggerFactory.getLogger(QuickConsultationRequestsServiceImpl.class);
 
     @Resource
     private QuickConsultationRequestsMapper quickConsultationRequestsMapper;

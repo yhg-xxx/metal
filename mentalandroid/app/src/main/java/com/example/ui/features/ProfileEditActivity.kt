@@ -447,10 +447,22 @@ fun ProfileEditScreen(
                     })
 
                     ProfileFormItem(label = "手机号", content = {
-                        Text(
-                            text = formatPhoneNumber(user.phone),
+                        TextField(
+                            value = formatPhoneNumber(user.phone),
+                            onValueChange = {},
                             modifier = Modifier.fillMaxWidth(),
-                            color = Color.Gray
+                            enabled = false,
+                            placeholder = { Text(text = "") },
+                            maxLines = 1,
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                disabledTextColor = Color.Gray,
+                                disabledContainerColor = Color.Transparent,
+                                disabledIndicatorColor = Color.Transparent
+                            )
                         )
                     })
 
@@ -524,28 +536,33 @@ fun ProfileEditScreen(
                     })
 
                     ProfileFormItem(label = "年龄", showDivider = false, content = {
-                        Box(modifier = Modifier.fillMaxWidth()) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { 
-                                        showAgeSelector = true
-                                    },
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = if (age.isNotEmpty()) "${age}岁" else "请选择",
-                                    color = if (age.isNotEmpty()) Color.Black else Color.Gray
-                                )
+                        TextField(
+                            value = if (age.isNotEmpty()) "${age}岁" else "请选择",
+                            onValueChange = {},
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showAgeSelector = true },
+                            enabled = false,
+                            placeholder = { Text(text = "") },
+                            trailingIcon = {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                     contentDescription = "选择年龄",
                                     tint = Color.Gray,
                                     modifier = Modifier.size(20.dp)
                                 )
-                            }
-                        }
+                            },
+                            maxLines = 1,
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                disabledTextColor = if (age.isNotEmpty()) Color.Black else Color.Gray,
+                                disabledContainerColor = Color.Transparent,
+                                disabledIndicatorColor = Color.Transparent
+                            )
+                        )
                     })
 
                     Spacer(modifier = Modifier.height(16.dp))

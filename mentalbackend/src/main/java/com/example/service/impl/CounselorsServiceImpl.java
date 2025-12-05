@@ -12,8 +12,7 @@ import com.example.service.CounselorServiceSettingsService;
 import com.example.service.UsersService;
 import jakarta.annotation.Resource;
 import org.json.JSONArray;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -26,16 +25,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * 咨询师服务实现类
  */
 @Service
+@Slf4j
 public class CounselorsServiceImpl extends ServiceImpl<CounselorsMapper, Counselors> implements CounselorsService {
-
-    private static final Logger log = LoggerFactory.getLogger(CounselorsServiceImpl.class);
 
     @Resource
     @Lazy

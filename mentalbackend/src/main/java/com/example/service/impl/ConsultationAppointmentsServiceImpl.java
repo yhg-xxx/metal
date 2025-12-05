@@ -1,6 +1,5 @@
 package com.example.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.dto.ConsultationAppointmentDTO;
 import com.example.entity.ConsultationAppointments;
@@ -11,16 +10,15 @@ import com.example.service.ConsultationAppointmentsService;
 import com.example.service.CounselorsService;
 import com.example.service.UsersService;
 import jakarta.annotation.Resource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -29,9 +27,8 @@ import java.util.List;
  * 咨询预约服务实现类
  */
 @Service
+@Slf4j
 public class ConsultationAppointmentsServiceImpl extends ServiceImpl<ConsultationAppointmentsMapper, ConsultationAppointments> implements ConsultationAppointmentsService {
-
-    private static final Logger log = LoggerFactory.getLogger(ConsultationAppointmentsServiceImpl.class);
 
     @Resource
     private ConsultationAppointmentsMapper consultationAppointmentsMapper;
@@ -217,9 +214,9 @@ public class ConsultationAppointmentsServiceImpl extends ServiceImpl<Consultatio
         }
         
         // 根据时长计算费用（按小时计费）
-        BigDecimal hours = new BigDecimal(durationMinutes).divide(new BigDecimal(60), 2, BigDecimal.ROUND_HALF_UP);
+        BigDecimal hours = new BigDecimal(durationMinutes).divide(new BigDecimal(60), 2, RoundingMode.HALF_UP);
         
-        return baseFee.multiply(typeMultiplier).multiply(hours).setScale(2, BigDecimal.ROUND_HALF_UP);
+        return baseFee.multiply(typeMultiplier).multiply(hours).setScale(2, RoundingMode.HALF_UP);
     }
 
     private void validateAppointmentParams(ConsultationAppointmentDTO appointmentDTO) {

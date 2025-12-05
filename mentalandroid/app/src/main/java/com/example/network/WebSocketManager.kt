@@ -55,6 +55,7 @@ class WebSocketManager private constructor() {
     )
 
     private var webSocket: WebSocket? = null
+    private var isConnectionOpen: Boolean = false // 跟踪连接状态
     private var userId: Long = 0L
     private var counselorId: Int = 0
     private var messageListener: ((ChatMessage) -> Unit)? = null
@@ -70,7 +71,7 @@ class WebSocketManager private constructor() {
         onWebRTCSignalReceived: ((WebRTCSignalMessage) -> Unit)? = null,
         onWebRTCStatusReceived: ((WebRTCStatusMessage) -> Unit)? = null
     ) {
-        Timber.tag(TAG).d("Attempting to connect to WebSocket for user: $userId, counselor: $counselorId")
+        Timber.tag(TAG).i("Attempting to connect to WebSocket for user: $userId, counselor: $counselorId")
 
         try {
             this.userId = userId
@@ -81,15 +82,11 @@ class WebSocketManager private constructor() {
             webRTCStatusListener = onWebRTCStatusReceived
 
             val baseUrl = IpAddressManager.BASE_URL
-            Timber.tag(TAG).d("Base URL: $baseUrl")
-
             val wsUrl = if (baseUrl.startsWith("https")) {
                 baseUrl.replace("https", "wss") + "/ws-native"
             } else {
                 baseUrl.replace("http", "ws") + "/ws-native"
             }
-
-            Timber.tag(TAG).d("WebSocket URL: $wsUrl")
 
             val client = OkHttpClient.Builder()
                 .connectTimeout(15, TimeUnit.SECONDS)
@@ -104,17 +101,15 @@ class WebSocketManager private constructor() {
 
             webSocket = client.newWebSocket(request, object : WebSocketListener() {
                 override fun onOpen(webSocket: WebSocket, response: Response) {
-                    Timber.tag(TAG).d("WebSocket connection established")
-                    Timber.tag(TAG).d("Response: ${response.code} - ${response.message}")
-
+                    Timber.tag(TAG).i("WebSocket connection established")
+                    isConnectionOpen = true
                     sendStompConnectFrame()
                 }
 
                 override fun onMessage(webSocket: WebSocket, text: String) {
-                    Timber.tag(TAG).d("Received raw message: ${text.replace(Char(0), '␀').take(200)}...")
                     try {
                         if (text.startsWith("CONNECTED")) {
-                            Timber.tag(TAG).d("STOMP protocol connected, subscribing to topics")
+                            Timber.tag(TAG).i("STOMP protocol connected, subscribing to topics")
                             subscribeToTopics()
                             return
                         }
@@ -149,7 +144,11 @@ class WebSocketManager private constructor() {
                 }
 
                 override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                    Timber.tag(TAG).d("WebSocket connection closed: $code - $reason")
+                    // 只在关闭代码非1000（正常关闭）时记录，避免过多无用日志
+                    if (code != 1000) {
+                        Timber.tag(TAG).i("WebSocket connection closed unexpectedly: $code - $reason")
+                    }
+                    isConnectionOpen = false
                 }
 
                 override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
@@ -158,6 +157,7 @@ class WebSocketManager private constructor() {
                     if (response != null) {
                         errorMsg += " (HTTP ${response.code})"
                     }
+                    isConnectionOpen = false
                     errorListener?.invoke(errorMsg)
                 }
             })
@@ -177,7 +177,6 @@ class WebSocketManager private constructor() {
             .toString()
 
         webSocket?.send(connectFrame)
-        Timber.tag(TAG).d("Sent STOMP CONNECT frame")
     }
 
     private fun subscribeToTopics() {
@@ -219,7 +218,6 @@ class WebSocketManager private constructor() {
             .toString()
 
         webSocket?.send(frame)
-        Timber.tag(TAG).d("Sent STOMP SUBSCRIBE frame: $destination with id: $subscriptionId")
     }
 
     private fun sendStompFrame(command: String, destination: String, body: String = "") {
@@ -237,7 +235,6 @@ class WebSocketManager private constructor() {
 
         val frameString = frame.toString()
         webSocket?.send(frameString)
-        Timber.tag(TAG).d("Sent STOMP frame: $command to $destination, length: ${frameString.length}")
     }
 
     fun sendMessage(
@@ -255,7 +252,6 @@ class WebSocketManager private constructor() {
 
             val jsonString = messageJson.toString()
             sendStompFrame("SEND", "/app/chat.private", jsonString)
-            Timber.tag(TAG).d("Message sent: $jsonString")
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Failed to send message")
         }
@@ -281,7 +277,6 @@ class WebSocketManager private constructor() {
 
             val jsonString = messageJson.toString()
             sendStompFrame("SEND", "/app/webrtc.signal", jsonString)
-            Timber.tag(TAG).d("WebRTC signal sent: $jsonString")
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Failed to send WebRTC signal")
             errorListener?.invoke("发送WebRTC信令失败: ${e.message}")
@@ -306,7 +301,6 @@ class WebSocketManager private constructor() {
 
             val jsonString = messageJson.toString()
             sendStompFrame("SEND", "/app/webrtc.status", jsonString)
-            Timber.tag(TAG).d("WebRTC status sent: $jsonString")
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Failed to send WebRTC status")
             errorListener?.invoke("发送WebRTC状态失败: ${e.message}")
@@ -317,13 +311,57 @@ class WebSocketManager private constructor() {
         try {
             webSocket?.close(1000, "Normal closure")
             webSocket = null
+            isConnectionOpen = false
             messageListener = null
             errorListener = null
             webRTCSignalListener = null
             webRTCStatusListener = null
-            Timber.tag(TAG).d("WebSocket disconnected")
+            Timber.tag(TAG).i("WebSocket disconnected")
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Failed to disconnect")
+        }
+    }
+
+    // 添加WebRTC信号监听器
+    fun addWebRTCSignalListener(listener: (WebRTCSignalMessage) -> Unit) {
+        webRTCSignalListener = listener
+    }
+
+    // 添加WebRTC状态监听器
+    fun addWebRTCStatusListener(listener: (WebRTCStatusMessage) -> Unit) {
+        webRTCStatusListener = listener
+    }
+
+    // 移除WebRTC信号监听器
+    fun removeWebRTCSignalListener(listener: (WebRTCSignalMessage) -> Unit) {
+        if (webRTCSignalListener == listener) {
+            webRTCSignalListener = null
+        }
+    }
+
+    // 移除WebRTC状态监听器
+    fun removeWebRTCStatusListener(listener: (WebRTCStatusMessage) -> Unit) {
+        if (webRTCStatusListener == listener) {
+            webRTCStatusListener = null
+        }
+    }
+
+    // 检查WebSocket连接状态
+    fun isConnected(): Boolean {
+        return isConnectionOpen
+    }
+
+    // 重新连接WebSocket
+    fun reconnect() {
+        if (userId != 0L && counselorId != 0) {
+            connect(
+                userId = userId,
+                counselorId = counselorId,
+                onMessageReceived = messageListener ?: {},
+                onError = errorListener ?: {},
+                onWebRTCSignalReceived = webRTCSignalListener,
+                onWebRTCStatusReceived = webRTCStatusListener
+            )
         }
     }
 
@@ -431,8 +469,6 @@ class WebSocketManager private constructor() {
 
     // 解析普通聊天消息
     private fun parseMessage(text: String): ChatMessage {
-        Timber.tag(TAG).d("Raw message received: ${text.replace(Char(0), '␀')}")
-
         if (text.startsWith("MESSAGE")) {
             val lines = text.split("\n")
             var bodyStartIndex = -1

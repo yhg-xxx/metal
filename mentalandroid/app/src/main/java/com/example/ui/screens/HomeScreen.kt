@@ -399,7 +399,8 @@ private fun CounselorItem(counselor: Counselor) {
             // 咨询师头像
             // 处理和记录图片URL
             val imageUrl = ImageLoadingUtils.processImageUrl(counselor.photoUrl)
-            Timber.d("加载咨询师头像: name=${counselor.realName}, originalUrl=${counselor.photoUrl}, processedUrl=$imageUrl")
+            // 移除不必要的debug日志，减少日志输出
+            // Timber.d("加载咨询师头像: name=${counselor.realName}, originalUrl=${counselor.photoUrl}, processedUrl=$imageUrl")
             
             Box(
                 modifier = Modifier
@@ -418,7 +419,8 @@ private fun CounselorItem(counselor: Counselor) {
                         Timber.e("头像加载失败: $error, url=$imageUrl")
                     },
                     onSuccess = {
-                        Timber.d("头像加载成功: ${counselor.realName}")
+                        // 移除成功日志，减少日志输出
+                        // Timber.d("头像加载成功: ${counselor.realName}")
                     }
                 )
             }

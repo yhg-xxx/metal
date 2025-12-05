@@ -10,21 +10,20 @@ import com.example.entity.Users;
 import com.example.mapper.UsersMapper;
 import com.example.service.UsersService;
 import jakarta.annotation.Resource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
  * 用户服务实现类
  */
 @Service
+@Slf4j
 public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements UsersService {
-
-    private static final Logger log = LoggerFactory.getLogger(UsersServiceImpl.class);
 
     @Resource
     private CounselorsService counselorsService;
@@ -115,5 +114,79 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
         }
 
         return response;
+    }
+
+    @Override
+    public boolean checkPhoneExists(String phone) {
+        if (phone == null || phone.isEmpty()) {
+            return false;
+        }
+        QueryWrapper<Users> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("phone", phone);
+        return this.exists(queryWrapper);
+    }
+
+    @Override
+    public Users registerUser(Users user) {
+        if (user == null || user.getPhone() == null || user.getPhone().isEmpty()) {
+            throw new IllegalArgumentException("用户信息或手机号不能为空");
+        }
+        if (user.getPassword() == null || user.getPassword().isEmpty()) {
+            throw new IllegalArgumentException("密码不能为空");
+        }
+
+        // 检查手机号是否已注册
+        if (checkPhoneExists(user.getPhone())) {
+            throw new IllegalArgumentException("手机号已注册");
+        }
+
+        // 如果用户名未提供，生成默认用户名
+        if (user.getUsername() == null || user.getUsername().isEmpty()) {
+            user.setUsername("user_" + user.getPhone());
+        }
+
+        // 密码已经是MD5加密的，直接存储
+        // user.setPassword(user.getPassword()); // 不需要再次加密
+
+        // 设置默认值
+        LocalDateTime now = LocalDateTime.now();
+        user.setCreatedTime(now);
+        user.setUpdatedTime(now);
+        user.setStatus("ACTIVE");
+
+        // 保存用户信息
+        this.save(user);
+        log.info("用户注册成功: phone={}, userId={}", user.getPhone(), user.getId());
+        return user;
+    }
+
+    @Override
+    public Users loginUser(String phone, String password) {
+        if (phone == null || phone.isEmpty() || password == null || password.isEmpty()) {
+            throw new IllegalArgumentException("手机号和密码不能为空");
+        }
+
+        // 根据手机号查询用户
+        QueryWrapper<Users> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("phone", phone);
+        Users user = this.getOne(queryWrapper);
+
+        // 验证用户是否存在
+        if (user == null) {
+            throw new IllegalArgumentException("用户不存在");
+        }
+
+        // 验证密码（传入的密码已经是MD5加密的）
+        if (!password.equals(user.getPassword())) {
+            throw new IllegalArgumentException("密码错误");
+        }
+
+        // 验证用户状态
+        if (!"ACTIVE".equals(user.getStatus())) {
+            throw new IllegalArgumentException("账号已被禁用");
+        }
+
+        log.info("用户登录成功: phone={}, userId={}", phone, user.getId());
+        return user;
     }
 }

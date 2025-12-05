@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -32,6 +33,130 @@ public class UsersController {
 
     @Resource
     private FileUploadService fileUploadService;
+
+    /**
+     * 手机号注册状态检查接口
+     * @param phone 手机号
+     * @return 注册状态信息
+     */
+    @GetMapping("/check/{phone}")
+    public Result checkPhone(@PathVariable String phone) {
+        try {
+            // 检查手机号格式
+            if (phone == null || phone.isEmpty()) {
+                return Result.error(400, "手机号不能为空");
+            }
+            
+            // 查询手机号是否已注册
+            boolean exists = usersService.checkPhoneExists(phone);
+            Map<String, Boolean> resultMap = new HashMap<>();
+            resultMap.put("exists", exists);
+            
+            return Result.success(resultMap);
+        } catch (Exception e) {
+            return Result.error(500, "服务器异常: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 用户注册接口
+     * @param user 用户信息
+     * @return 注册结果
+     */
+    @PostMapping("/register")
+    public Result registerUser(@RequestBody Users user) {
+        try {
+            // 验证参数
+            if (user == null) {
+                return Result.error(400, "用户信息不能为空");
+            }
+            if (user.getPhone() == null || user.getPhone().isEmpty()) {
+                return Result.error(400, "手机号不能为空");
+            }
+            if (user.getPassword() == null || user.getPassword().isEmpty()) {
+                return Result.error(400, "密码不能为空");
+            }
+            
+            // 调用服务层进行注册
+            Users registeredUser = usersService.registerUser(user);
+            
+            // 排除password字段返回
+            Users responseUser = new Users();
+            responseUser.setId(registeredUser.getId());
+            responseUser.setUsername(registeredUser.getUsername());
+            responseUser.setPhone(registeredUser.getPhone());
+            responseUser.setEmail(registeredUser.getEmail());
+            responseUser.setNickname(registeredUser.getNickname());
+            responseUser.setAvatarUrl(registeredUser.getAvatarUrl());
+            responseUser.setGender(registeredUser.getGender());
+            responseUser.setAge(registeredUser.getAge());
+            responseUser.setStatus(registeredUser.getStatus());
+            responseUser.setCreatedTime(registeredUser.getCreatedTime());
+            responseUser.setUpdatedTime(registeredUser.getUpdatedTime());
+            
+            return Result.success("注册成功", responseUser);
+        } catch (IllegalArgumentException e) {
+            if (e.getMessage().equals("手机号已注册")) {
+                return Result.error(409, e.getMessage());
+            } else {
+                return Result.error(400, e.getMessage());
+            }
+        } catch (Exception e) {
+            return Result.error(500, "注册失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 用户登录接口
+     * @param loginData 登录信息（包含phone和password）
+     * @return 登录结果
+     */
+    @PostMapping("/login")
+    public Result loginUser(@RequestBody Map<String, String> loginData) {
+        try {
+            // 获取手机号和密码
+            String phone = loginData.get("phone");
+            String password = loginData.get("password");
+            
+            // 验证参数
+            if (phone == null || phone.isEmpty()) {
+                return Result.error(400, "手机号不能为空");
+            }
+            if (password == null || password.isEmpty()) {
+                return Result.error(400, "密码不能为空");
+            }
+            
+            // 调用服务层进行登录
+            Users user = usersService.loginUser(phone, password);
+            
+            // 排除password字段返回
+            Users responseUser = new Users();
+            responseUser.setId(user.getId());
+            responseUser.setUsername(user.getUsername());
+            responseUser.setPhone(user.getPhone());
+            responseUser.setEmail(user.getEmail());
+            responseUser.setNickname(user.getNickname());
+            responseUser.setAvatarUrl(user.getAvatarUrl());
+            responseUser.setGender(user.getGender());
+            responseUser.setAge(user.getAge());
+            responseUser.setStatus(user.getStatus());
+            responseUser.setCreatedTime(user.getCreatedTime());
+            responseUser.setUpdatedTime(user.getUpdatedTime());
+            
+            return Result.success("登录成功", responseUser);
+        } catch (IllegalArgumentException e) {
+            String message = e.getMessage();
+            if (message.equals("用户不存在")) {
+                return Result.error(401, message);
+            } else if (message.equals("密码错误")) {
+                return Result.error(401, message);
+            } else {
+                return Result.error(400, message);
+            }
+        } catch (Exception e) {
+            return Result.error(500, "登录失败: " + e.getMessage());
+        }
+    }
 
     /**
      * 新增用户
