@@ -13,6 +13,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Color
 import coil.compose.rememberAsyncImagePainter
@@ -34,6 +36,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 
 
 
@@ -61,6 +64,18 @@ class QuickConsultationActivity : ComponentActivity() {
             }
         }
     }
+}
+
+// 表单标题组件，统一样式
+@Composable
+fun FormSectionTitle(text: String, marginTop: Dp = 0.dp, marginBottom: Dp = 8.dp) {
+    Text(
+        text = text, 
+        fontWeight = FontWeight.Bold, 
+        fontSize = 16.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = marginTop, bottom = marginBottom)
+    )
 }
 
 @Composable
@@ -258,27 +273,21 @@ fun QuickConsultationScreen() {
             } else {
                 // 表单页面
                         LazyColumn(
-                            modifier = Modifier
-                                .fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                    // 问题描述
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // 合并前三个卡片为一个统一卡片
                     item {
                         Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.onPrimary
-                        )
-                    ) {
+                            modifier = Modifier.fillMaxWidth(),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.onPrimary
+                            )
+                        ) {
                             Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    "核心心理问题描述", 
-                                    fontWeight = FontWeight.Bold, 
-                                    fontSize = 16.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(bottom = 8.dp)
-                                )
+                                // 核心心理问题描述
+                                FormSectionTitle(text = "核心心理问题描述")
                                 TextField(
                                     value = problemDescription,
                                     onValueChange = { problemDescription = it },
@@ -293,27 +302,9 @@ fun QuickConsultationScreen() {
                                         unfocusedIndicatorColor = MaterialTheme.colorScheme.outline
                                     )
                                 )
-                            }
-                        }
-                    }
-                    
-                    // 问题持续时间
-                    item {
-                        Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.onPrimary
-                        )
-                    ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    "问题持续时间", 
-                                    fontWeight = FontWeight.Bold, 
-                                    fontSize = 16.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(bottom = 8.dp)
-                                )
+                                
+                                // 问题持续时间
+                                FormSectionTitle(text = "问题持续时间", marginTop = 16.dp)
                                 ExposedDropdownMenuBox(
                                     expanded = isDropdownExpanded,
                                     onExpandedChange = { isDropdownExpanded = it }
@@ -343,7 +334,6 @@ fun QuickConsultationScreen() {
                                         onDismissRequest = { isDropdownExpanded = false },
                                         modifier = Modifier.fillMaxWidth()
                                                 .background(LightGrayBackground)
-
                                     ) {
                                         durationOptions.forEach { option ->
                                             DropdownMenuItem(
@@ -357,27 +347,9 @@ fun QuickConsultationScreen() {
                                         }
                                     }
                                 }
-                            }
-                        }
-                    }
-                    
-                    // 偏好咨询方式
-                    item {
-                        Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.onPrimary
-                        )
-                    ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    "偏好咨询方式", 
-                                    fontWeight = FontWeight.Bold, 
-                                    fontSize = 16.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(bottom = 8.dp)
-                                )
+                                
+                                // 偏好咨询方式
+                                FormSectionTitle(text = "偏好咨询方式", marginTop = 16.dp)
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -413,42 +385,72 @@ fun QuickConsultationScreen() {
                     // 图片上传
                     item {
                         Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.onPrimary
-                        )
-                    ) {
+                            modifier = Modifier.fillMaxWidth(),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.onPrimary
+                            )
+                        ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    "上传相关图片（选填）", 
-                                    fontWeight = FontWeight.Bold, 
-                                    fontSize = 16.sp,
+                                    "上传图片(选填)",
+                                    fontSize = 14.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(bottom = 8.dp)
+                                    modifier = Modifier.padding(bottom = 12.dp)
                                 )
-                                Surface(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(150.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .clickable {
-                                            val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-                                            pickImageLauncher.launch(intent)
-                                        },
-                                    color = LightGrayBackground,
-                                    shape = RoundedCornerShape(8.dp)
+                                
+                                // 图片上传区域 - 水平排列的图片预览
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
+                                    // 已选择的图片预览
                                     if (selectedImageUri != null) {
-                                        Image(
-                                            painter = rememberAsyncImagePainter(model = selectedImageUri),
-                                            contentDescription = "已选图片",
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .clip(RoundedCornerShape(8.dp)),
-                                            contentScale = ContentScale.Crop
-                                        )
-                                    } else {
+                                        Box(modifier = Modifier.size(80.dp)) {
+                                            Image(
+                                                painter = rememberAsyncImagePainter(model = selectedImageUri),
+                                                contentDescription = "已选图片",
+                                                modifier = Modifier
+                                                    .size(80.dp)
+                                                    .clip(RoundedCornerShape(4.dp)),
+                                                contentScale = ContentScale.Crop,
+                                                alignment = Alignment.Center
+                                            )
+
+                                            // 移除图片按钮 - 右上角小叉图标
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(Alignment.TopEnd)
+                                                    .offset(x = 4.dp, y = (-4).dp)
+                                                    .size(16.dp) // 控制阴影背景的大小
+                                                    .background(Color.Black.copy(alpha = 0.3f), CircleShape)
+                                                    .clickable { selectedImageUri = null },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Filled.Close,
+                                                    contentDescription = "移除图片",
+                                                    modifier = Modifier.size(10.dp), // 控制叉图标的大小
+                                                    tint = Color.White
+                                                )
+                                            }
+                                        }
+                                    }
+                                    
+                                    // 添加图片的虚线框按钮
+                                    Box(
+                                        modifier = Modifier
+                                            .size(80.dp)
+                                            .border(
+                                                width = 1.dp,
+                                                color = MaterialTheme.colorScheme.outlineVariant,
+                                                shape = RoundedCornerShape(4.dp)
+                                            )
+                                            .clickable {
+                                                val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+                                                pickImageLauncher.launch(intent)
+                                            }
+                                    ) {
                                         Column(
                                             horizontalAlignment = Alignment.CenterHorizontally,
                                             verticalArrangement = Arrangement.Center,
@@ -457,13 +459,8 @@ fun QuickConsultationScreen() {
                                             Icon(
                                                 imageVector = Icons.Filled.AddCircle,
                                                 contentDescription = "选择图片",
-                                                modifier = Modifier.size(32.dp),
+                                                modifier = Modifier.size(24.dp),
                                                 tint = MaterialTheme.colorScheme.outlineVariant
-                                            )
-                                            Spacer(modifier = Modifier.height(8.dp))
-                                            Text(
-                                                text = "点击选择图片",
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                     }

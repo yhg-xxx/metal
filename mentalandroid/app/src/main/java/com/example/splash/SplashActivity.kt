@@ -45,13 +45,14 @@ class SplashActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         dbHelper = DatabaseHelper(this)
         
-        setContent {
-            SplashScreen {        
+        setContent { SplashScreen {        
                 // 检查用户是否已登录
                 val loggedInUser = dbHelper.getLoggedInUser()
                 if (loggedInUser != null && loggedInUser.isLogin) {
-                    // 已登录，直接跳转到主页
-                    startActivity(Intent(this@SplashActivity, MainActivity::class.java))
+                    // 已登录，直接跳转到主页，并添加参数标识是从广告页面跳转
+                    val intent = Intent(this@SplashActivity, MainActivity::class.java)
+                    intent.putExtra("FROM_AD_SCREEN", true)
+                    startActivity(intent)
                 } else {
                     // 未登录，跳转到登录页
                     startActivity(Intent(this@SplashActivity, LoginActivity::class.java))

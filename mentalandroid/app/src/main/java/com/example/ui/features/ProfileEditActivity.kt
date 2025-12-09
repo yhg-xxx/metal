@@ -644,8 +644,7 @@ fun ProfileFormItem(label: String, showDivider: Boolean = true, content: @Compos
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
-                .height(56.dp), // 固定高度确保间距一致
+                .padding(horizontal = 16.dp, vertical = 8.dp), // 减少垂直内边距
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -657,8 +656,7 @@ fun ProfileFormItem(label: String, showDivider: Boolean = true, content: @Compos
             )
             Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
+                    .weight(1f),
                 contentAlignment = Alignment.CenterStart
             ) {
                 content()

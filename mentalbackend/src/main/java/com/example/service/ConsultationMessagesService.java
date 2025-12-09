@@ -35,4 +35,7 @@ public interface ConsultationMessagesService extends IService<ConsultationMessag
     
     // 获取用户与每个咨询师的最新一条消息
     List<ConsultationMessages> getUserLatestMessagesWithCounselors(Long userId);
+    
+    // 获取咨询师与每个用户的最新一条消息
+    List<ConsultationMessages> getCounselorLatestMessagesWithUsers(Long counselorId);
 }

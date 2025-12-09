@@ -10,9 +10,10 @@
     </select>
     
     <select id="getMessagesByAppointmentId" resultType="com.example.entity.ConsultationMessages">
-        SELECT * FROM consultation_messages
+        SELECT *
+        FROM consultation_messages
         WHERE appointment_id = #{appointmentId}
-        ORDER BY sent_time ASC
+        ORDER BY sent_time
     </select>
     
     <update id="updateReadStatus">
@@ -40,6 +41,19 @@
             GROUP BY counselor_id
         ) latest ON cm.counselor_id = latest.counselor_id AND cm.sent_time = latest.max_time
         WHERE cm.user_id = #{userId}
+        ORDER BY cm.sent_time DESC
+    </select>
+    
+    <!-- 获取咨询师与每个用户的最新一条消息 -->
+    <select id="getCounselorLatestMessagesWithUsers" resultType="com.example.entity.ConsultationMessages">
+        SELECT cm.* FROM consultation_messages cm
+        INNER JOIN (
+            SELECT user_id, MAX(sent_time) as max_time
+            FROM consultation_messages
+            WHERE counselor_id = #{counselorId}
+            GROUP BY user_id
+        ) latest ON cm.user_id = latest.user_id AND cm.sent_time = latest.max_time
+        WHERE cm.counselor_id = #{counselorId}
         ORDER BY cm.sent_time DESC
     </select>
 </mapper>

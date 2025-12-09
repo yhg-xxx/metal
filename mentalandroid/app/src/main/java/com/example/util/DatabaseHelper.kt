@@ -167,6 +167,10 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
             }
 
             val contentValues = ContentValues()
+            // 始终包含ID字段，确保本地与远程ID同步
+            if (user.id > 0) {
+                contentValues.put(COLUMN_ID, user.id)
+            }
             contentValues.put(COLUMN_USERNAME, user.username)
             contentValues.put(COLUMN_PHONE, user.phone)
             contentValues.put(COLUMN_PASSWORD, user.password)
@@ -195,11 +199,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
                 // 始终使用手机号作为更新条件，确保本地与远程用户数据正确匹配
                 val whereClause = "$COLUMN_PHONE = ?"
                 val whereArgs = arrayOf(user.phone)
-
-                // 重要：在更新时不要包含ID字段，避免主键冲突
-                if (contentValues.containsKey(COLUMN_ID)) {
-                    contentValues.remove(COLUMN_ID)
-                }
 
                 val updateResult = db.update(TABLE_USER, contentValues, whereClause, whereArgs)
                 println("更新用户结果: $updateResult, where: $whereClause, args: ${whereArgs.joinToString()}")

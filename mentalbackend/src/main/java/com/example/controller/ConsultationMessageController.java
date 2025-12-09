@@ -3,8 +3,10 @@ package com.example.controller;
 import com.example.utils.Result;
 import com.example.dto.CounselorDTO;
 import com.example.entity.ConsultationMessages;
+import com.example.entity.Users;
 import com.example.service.ConsultationMessagesService;
 import com.example.service.CounselorsService;
+import com.example.service.UsersService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +32,9 @@ public class ConsultationMessageController {
     
     @Resource
     private CounselorsService counselorsService;
+    
+    @Resource
+    private UsersService usersService;
 
     /**
      * 根据用户ID和咨询师ID获取对话记录
@@ -104,48 +109,86 @@ public class ConsultationMessageController {
     }
     
     /**
-     * 获取用户所有进行过对话的咨询师信息
-     * @param userId 用户ID
-     * @return Result<List<CounselorDTO>> 咨询师信息列表
+     * 获取用户所有进行过对话的咨询师信息或咨询师所有进行过对话的用户信息
+     * @param userId 用户ID或咨询师ID
+     * @param type 类型，可选值：user（默认）或counselor
+     * @return Result<List<CounselorDTO>> 咨询师信息列表或用户信息列表
      */
     @GetMapping("/user/counselors")
-    public Result getUserConversatedCounselors(@RequestParam("userId") Long userId) {
+    public Result getConversatedUsersOrCounselors(@RequestParam("userId") Long userId, 
+                                                  @RequestParam(value = "type", defaultValue = "user") String type) {
         try {
-            log.info("获取用户所有进行过对话的咨询师信息: 用户ID={}", userId);
-            
             if (userId == null) {
-                log.error("用户ID不能为空");
-                return Result.error(400, "用户ID不能为空");
+                log.error("ID不能为空");
+                return Result.error(400, "ID不能为空");
             }
             
-            // 获取用户与每个咨询师的最新消息
-            List<ConsultationMessages> latestMessages = consultationMessagesService.getUserLatestMessagesWithCounselors(userId);
-            if (latestMessages == null || latestMessages.isEmpty()) {
-                log.info("用户还没有任何对话记录");
-                return Result.success("查询成功", new ArrayList<CounselorDTO>());
-            }
-            
-            // 提取咨询师ID并去重
-            Set<Long> counselorIdSet = new HashSet<>();
-            for (ConsultationMessages message : latestMessages) {
-                if (message.getCounselorId() != null) {
-                    counselorIdSet.add(message.getCounselorId());
+            if ("user".equals(type)) {
+                // 原逻辑：获取用户所有进行过对话的咨询师信息
+                log.info("获取用户所有进行过对话的咨询师信息: 用户ID={}", userId);
+                
+                // 获取用户与每个咨询师的最新消息
+                List<ConsultationMessages> latestMessages = consultationMessagesService.getUserLatestMessagesWithCounselors(userId);
+                if (latestMessages == null || latestMessages.isEmpty()) {
+                    log.info("用户还没有任何对话记录");
+                    return Result.success("查询成功", new ArrayList<>());
                 }
-            }
-            
-            // 获取每个咨询师的详情
-            List<CounselorDTO> counselorDTOList = new ArrayList<>();
-            for (Long counselorId : counselorIdSet) {
-                CounselorDTO counselorDTO = counselorsService.getCounselorDetail(counselorId);
-                if (counselorDTO != null) {
-                    counselorDTOList.add(counselorDTO);
+                
+                // 提取咨询师ID并去重
+                Set<Long> counselorIdSet = new HashSet<>();
+                for (ConsultationMessages message : latestMessages) {
+                    if (message.getCounselorId() != null) {
+                        counselorIdSet.add(message.getCounselorId());
+                    }
                 }
+                
+                // 获取每个咨询师的详情
+                List<CounselorDTO> counselorDTOList = new ArrayList<>();
+                for (Long counselorId : counselorIdSet) {
+                    CounselorDTO counselorDTO = counselorsService.getCounselorDetail(counselorId);
+                    if (counselorDTO != null) {
+                        counselorDTOList.add(counselorDTO);
+                    }
+                }
+                
+                log.info("获取用户对话咨询师信息成功，共{}名咨询师", counselorDTOList.size());
+                return Result.success("查询成功", counselorDTOList);
+            } else if ("counselor".equals(type)) {
+                // 新逻辑：获取咨询师所有进行过对话的用户信息
+                log.info("获取咨询师所有进行过对话的用户信息: 咨询师ID={}", userId);
+                
+                // 获取咨询师与每个用户的最新消息
+                List<ConsultationMessages> latestMessages = consultationMessagesService.getCounselorLatestMessagesWithUsers(userId);
+                if (latestMessages == null || latestMessages.isEmpty()) {
+                    log.info("咨询师还没有任何对话记录");
+                    return Result.success("查询成功", new ArrayList<>());
+                }
+                
+                // 提取用户ID并去重
+                Set<Long> userIdSet = new HashSet<>();
+                for (ConsultationMessages message : latestMessages) {
+                    if (message.getUserId() != null) {
+                        userIdSet.add(message.getUserId());
+                    }
+                }
+                
+                // 获取每个用户的详情
+                List<Users> userList = new ArrayList<>();
+                for (Long uid : userIdSet) {
+                    Users user = usersService.getById(uid);
+                    if (user != null) {
+                        userList.add(user);
+                    }
+                }
+                
+                log.info("获取咨询师对话用户信息成功，共{}名用户", userList.size());
+                return Result.success("查询成功", userList);
+            } else {
+                log.error("无效的类型参数: {}", type);
+                return Result.error(400, "无效的类型参数");
             }
-            
-            log.info("获取用户对话咨询师信息成功，共{}名咨询师", counselorDTOList.size());
-            return Result.success("查询成功", counselorDTOList);
         } catch (Exception e) {
-            log.error("获取用户对话咨询师信息失败: {}", e.getMessage(), e);
+            log.error("获取对话信息失败: {}", e.getMessage(), e);
             return Result.error("查询失败: " + e.getMessage());
         }
     }

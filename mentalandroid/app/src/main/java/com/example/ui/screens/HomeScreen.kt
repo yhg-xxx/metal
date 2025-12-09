@@ -1,5 +1,11 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,26 +23,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -47,6 +44,7 @@ import androidx.compose.foundation.background
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
 import kotlinx.coroutines.*
 import com.example.R
 import com.example.model.Counselor
@@ -61,13 +59,14 @@ import com.example.util.ImageLoadingUtils
 import timber.log.Timber
 
 
+
 /**
  * 首页屏幕组件
  * 实现图片样式的主页，包含搜索栏、主要功能入口、推荐咨询师等内容
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(modifier: Modifier = Modifier, onNavigateToSearch: () -> Unit) {
+fun HomeScreen(modifier: Modifier = Modifier, onNavigateToSearch: () -> Unit, isFromAdScreen: Boolean = false) {
     val context = LocalContext.current
     
     // 导航到快速咨询页面
@@ -78,6 +77,26 @@ fun HomeScreen(modifier: Modifier = Modifier, onNavigateToSearch: () -> Unit) {
     var counselors by remember { mutableStateOf<List<Counselor>?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    
+    // 升级服务弹窗状态
+    var showUpgradePopup by remember { mutableStateOf(false) }
+
+    
+    // 当isFromAdScreen参数为true时检查是否需要显示对话框
+    LaunchedEffect(isFromAdScreen) {
+        // 添加500ms延迟，确保页面加载完成后再显示弹窗
+        delay(500)
+
+        // 简化条件：只要是从广告页跳转过来就显示弹窗
+        if (isFromAdScreen) {
+            showUpgradePopup = true
+        }
+    }
+    
+    // 点击升级服务按钮显示弹窗
+    val showUpgradePopupHandler: () -> Unit = {
+        showUpgradePopup = true
+    }
 
     // 获取咨询师列表
     LaunchedEffect(Unit) {
@@ -143,6 +162,13 @@ fun HomeScreen(modifier: Modifier = Modifier, onNavigateToSearch: () -> Unit) {
             )
         }
     ) { paddingValues ->
+        // 显示升级服务弹窗
+        if (showUpgradePopup) {
+            UpgradeServicePopup(
+                onDismiss = { showUpgradePopup = false }
+            )
+        }
+        
         LazyColumn(
             modifier = modifier
                 .fillMaxSize()
@@ -181,6 +207,11 @@ fun HomeScreen(modifier: Modifier = Modifier, onNavigateToSearch: () -> Unit) {
                     FeatureEntryItem("心理测评", R.drawable.mental)
                     FeatureEntryItem("快速咨询", R.drawable.mental2, onClick = navigateToQuickConsultation)
                 }
+            }
+            
+            // 升级服务按钮
+            item {
+                UpgradeServiceBanner(onClick = showUpgradePopupHandler)
             }
 
             // 推荐咨询师
@@ -529,6 +560,138 @@ private fun CounselorItem(counselor: Counselor) {
                 )
             }
         }
+    }
+}
+
+/**
+ * 升级服务横幅组件
+ */
+@Composable
+private fun UpgradeServiceBanner(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .height(80.dp)
+            .clickable {
+                onClick()
+            },
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.primary),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // 左侧文字内容
+                Column(
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "首单半价",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            modifier = Modifier.padding(end = 12.dp)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                                .background(Color.White.copy(alpha = 0.2f))
+                                .clip(RoundedCornerShape(4.dp))
+                        ) {
+                            Text(
+                                text = "点击咨询",
+                                fontSize = 12.sp,
+                                color = Color.White
+                            )
+                        }
+                    }
+                    Text(
+                        text = "轻松开启心灵对话",
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.9f)
+                    )
+                }
+                
+                // 右侧图片
+                Image(
+                    painter = painterResource(id = R.drawable.mental2), // 使用现有图片资源
+                    contentDescription = "升级服务",
+                    modifier = Modifier.size(60.dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 升级服务对话框组件
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun UpgradeServicePopup(
+    onDismiss: () -> Unit
+) {
+    AnimatedVisibility(
+        visible = true,
+        enter = fadeIn(animationSpec = tween(300)) + scaleIn(animationSpec = tween(300)),
+        exit = fadeOut(animationSpec = tween(300)) + scaleOut(animationSpec = tween(300))
+    ) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = {
+                Text(
+                    text = "首单半价",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center
+                )
+            },
+            text = {
+                Text(
+                    text = "欢迎使用央心心理服务！\n\n首次咨询可享受半价优惠，专业心理咨询师为您提供一对一服务，帮助您解决心理困扰，开启健康生活。\n\n立即预约，享受专属优惠！",
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text(
+                        text = "关闭",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.onPrimary,
+            shape = RoundedCornerShape(16.dp)
+        )
     }
 }
 

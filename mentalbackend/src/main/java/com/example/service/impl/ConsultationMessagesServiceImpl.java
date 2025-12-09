@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
@@ -129,6 +128,12 @@ public class ConsultationMessagesServiceImpl extends ServiceImpl<ConsultationMes
     @Override
     public List<ConsultationMessages> getUserLatestMessagesWithCounselors(Long userId) {
         List<ConsultationMessages> messages = consultationMessagesMapper.getUserLatestMessagesWithCounselors(userId);
+        return processMessagesTime(messages);
+    }
+    
+    @Override
+    public List<ConsultationMessages> getCounselorLatestMessagesWithUsers(Long counselorId) {
+        List<ConsultationMessages> messages = consultationMessagesMapper.getCounselorLatestMessagesWithUsers(counselorId);
         return processMessagesTime(messages);
     }
     
