@@ -62,6 +62,13 @@ class WebSocketManager private constructor() {
     private var errorListener: ((String) -> Unit)? = null
     private var webRTCSignalListener: ((WebRTCSignalMessage) -> Unit)? = null
     private var webRTCStatusListener: ((WebRTCStatusMessage) -> Unit)? = null
+    
+    // 重连机制相关变量
+    private var reconnectAttempts = 0
+    private val maxReconnectAttempts = 5
+    private val initialReconnectDelay = 1000L // 1秒
+    private var reconnectTask: java.util.TimerTask? = null
+    private var isReconnecting = false
 
     fun connect(
         userId: Long,
@@ -103,6 +110,7 @@ class WebSocketManager private constructor() {
                 override fun onOpen(webSocket: WebSocket, response: Response) {
                     Timber.tag(TAG).i("WebSocket connection established")
                     isConnectionOpen = true
+                    reconnectAttempts = 0 // 重置重连计数
                     sendStompConnectFrame()
                 }
 
@@ -147,6 +155,7 @@ class WebSocketManager private constructor() {
                     // 只在关闭代码非1000（正常关闭）时记录，避免过多无用日志
                     if (code != 1000) {
                         Timber.tag(TAG).i("WebSocket connection closed unexpectedly: $code - $reason")
+                        scheduleReconnect() // 计划重连
                     }
                     isConnectionOpen = false
                 }
@@ -159,11 +168,13 @@ class WebSocketManager private constructor() {
                     }
                     isConnectionOpen = false
                     errorListener?.invoke(errorMsg)
+                    scheduleReconnect() // 计划重连
                 }
             })
         } catch (e: Exception) {
             Timber.tag(TAG).e(e, "Failed to initialize WebSocket")
             errorListener?.invoke("WebSocket连接异常: ${e.message}")
+            scheduleReconnect() // 计划重连
         }
     }
 
@@ -309,6 +320,12 @@ class WebSocketManager private constructor() {
 
     fun disconnect() {
         try {
+            // 取消所有重连任务
+            reconnectTask?.cancel()
+            reconnectTask = null
+            reconnectAttempts = 0
+            isReconnecting = false
+            
             webSocket?.close(1000, "Normal closure")
             webSocket = null
             isConnectionOpen = false
@@ -353,7 +370,9 @@ class WebSocketManager private constructor() {
 
     // 重新连接WebSocket
     fun reconnect() {
-        if (userId != 0L && counselorId != 0) {
+        if (userId != 0L && counselorId != 0 && !isReconnecting) {
+            isReconnecting = true
+            Timber.tag(TAG).i("Attempting manual reconnection")
             connect(
                 userId = userId,
                 counselorId = counselorId,
@@ -362,7 +381,37 @@ class WebSocketManager private constructor() {
                 onWebRTCSignalReceived = webRTCSignalListener,
                 onWebRTCStatusReceived = webRTCStatusListener
             )
+            isReconnecting = false
         }
+    }
+    
+    // 计划重连
+    private fun scheduleReconnect() {
+        // 如果已经在重连中或者达到最大重连次数，直接返回
+        if (isReconnecting || reconnectAttempts >= maxReconnectAttempts) {
+            return
+        }
+        
+        isReconnecting = true
+        reconnectAttempts++
+        
+        // 指数退避算法计算重连延迟
+        val delay = initialReconnectDelay * (1 shl (reconnectAttempts - 1)).coerceAtMost(30000) // 最多30秒
+        
+        Timber.tag(TAG).i("Scheduling reconnect attempt $reconnectAttempts in ${delay}ms")
+        
+        reconnectTask?.cancel()
+        reconnectTask = object : java.util.TimerTask() {
+            override fun run() {
+                try {
+                    reconnect()
+                } finally {
+                    isReconnecting = false
+                }
+            }
+        }
+        
+        java.util.Timer().schedule(reconnectTask, delay)
     }
 
     // 尝试解析WebRTC信令消息

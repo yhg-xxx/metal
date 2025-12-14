@@ -20,15 +20,15 @@ const router = createRouter({
                         component: () => import('@/components/Profile.vue') // 个人信息页面组件
                     },
                     
-            {
-                path: 'messages',
+            {                path: 'messages',
                 name: 'messages',
-                component: () => import('@/components/MessageList.vue')
-            },
-            {
-                path: 'chat-detail',
-                name: 'chatDetail',
-                component: () => import('@/components/ChatDetail.vue')
+                component: () => import('@/components/MessageList.vue'),
+                children: [
+                    {                        path: 'chat-detail',
+                        name: 'chatDetail',
+                        component: () => import('@/components/ChatDetail.vue')
+                    }
+                ]
             }
                 ]
             }

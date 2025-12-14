@@ -10,6 +10,9 @@ import androidx.core.content.ContextCompat
 import android.Manifest
 import android.annotation.SuppressLint
 import android.widget.Toast
+import android.app.AlertDialog
+import android.net.Uri
+import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -42,6 +45,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.compose.material.icons.automirrored.filled.CallMissed
 
+@Suppress("DEPRECATION")
 class VideoCallActivity : ComponentActivity() {
     companion object {
         const val EXTRA_USER_ID = "userId"
@@ -50,7 +54,8 @@ class VideoCallActivity : ComponentActivity() {
         const val EXTRA_INCOMING_CALL = "incomingCall"
         const val EXTRA_CALLER_NAME = "callerName"
         const val EXTRA_CALLER_AVATAR = "callerAvatar"
-        const val PERMISSION_REQUEST_CODE = 1001
+        private const val PERMISSION_REQUEST_CODE = 1001
+        private const val SETTINGS_REQUEST_CODE = 1002
 
         fun start(context: Context, userId: Long, counselorId: Int, callId: String,
                   isIncomingCall: Boolean = false, callerName: String? = null,
@@ -472,10 +477,12 @@ class VideoCallActivity : ComponentActivity() {
         }
     }
 
-    private fun requestPermissionsIfNeeded() {
+    private fun requestPermissionsIfNeeded(onPermissionsGranted: (() -> Unit)? = null) {
         if (!hasRequiredPermissions()) {
+            this.onPermissionsGranted = onPermissionsGranted
             requestPermissions(requiredPermissions, PERMISSION_REQUEST_CODE)
         } else {
+            onPermissionsGranted?.invoke()
             initializeCameraIfReady()
         }
     }
@@ -488,16 +495,85 @@ class VideoCallActivity : ComponentActivity() {
     private fun hasRequiredPermissions(): Boolean {
         return requiredPermissions.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }
     }
+    
+    // 权限授予回调函数
+    private var onPermissionsGranted: (() -> Unit)? = null
+
+    // 添加onRequestPermissionsResult方法
+    @Deprecated("Deprecated in Java")
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                // 所有权限都被授予
+                onPermissionsGranted?.invoke()
+                initializeCameraIfReady()
+            } else {
+                // 权限被拒绝
+                Toast.makeText(this, "需要相机和麦克风权限才能进行视频通话", Toast.LENGTH_LONG).show()
+                
+                // 检查是否有任何权限被永久拒绝
+                val permanentlyDenied = permissions.any { 
+                    !shouldShowRequestPermissionRationale(it) && 
+                    ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+                }
+                
+                if (permanentlyDenied) {
+                    // 显示对话框引导用户到设置页面
+                    showPermissionSettingsDialog()
+                } else {
+                    // 如果用户只是暂时拒绝，结束通话
+                    endCall()
+                }
+            }
+        }
+    }
+    
+    // 显示权限设置对话框
+    private fun showPermissionSettingsDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("权限请求")
+            .setMessage("需要相机和麦克风权限才能进行视频通话。请在设置中启用这些权限。")
+            .setPositiveButton("去设置") { _, _ ->
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                val uri = Uri.fromParts("package", packageName, null)
+                intent.data = uri
+                startActivityForResult(intent, SETTINGS_REQUEST_CODE)
+            }
+            .setNegativeButton("取消") { dialog, _ ->
+                dialog.dismiss()
+                // 如果用户拒绝，结束通话
+                endCall()
+            }
+            .setCancelable(false)
+            .show()
+    }
 
     fun acceptCall() {
         try {
             // 检查权限
             if (!hasRequiredPermissions()) {
                 Toast.makeText(this, "请先授予相机和麦克风权限", Toast.LENGTH_SHORT).show()
-                requestPermissionsIfNeeded()
+                requestPermissionsIfNeeded {
+                    // 权限授予后继续执行
+                    proceedWithAcceptCall()
+                }
                 return
             }
 
+            proceedWithAcceptCall()
+
+        } catch (e: Exception) {
+            Timber.e(e, "接受通话失败")
+            runOnUiThread {
+                Toast.makeText(this, "接受通话失败: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+    
+    // 权限授予后继续执行接受通话的逻辑
+    private fun proceedWithAcceptCall() {
+        try {
             // 确保WebRTC已初始化
             if (!::peerConnectionFactory.isInitialized) {
                 initializeWebRTC()
@@ -727,11 +803,15 @@ class VideoCallActivity : ComponentActivity() {
     }
 
     private fun cleanup() {
-        // Timber.d("开始清理WebRTC资源")
+        Timber.d("开始清理WebRTC资源")
 
         try {
             // 停止视频捕获
-            videoCapturer?.stopCapture()
+            try {
+                videoCapturer?.stopCapture()
+            } catch (e: Exception) {
+                Timber.e(e, "停止视频捕获失败")
+            }
             videoCapturer?.dispose()
             videoCapturer = null
 
@@ -752,6 +832,11 @@ class VideoCallActivity : ComponentActivity() {
             peerConnection?.dispose()
             peerConnection = null
 
+            // 释放PeerConnectionFactory
+            if (::peerConnectionFactory.isInitialized) {
+                peerConnectionFactory.dispose()
+            }
+
             // 释放视频视图
             try {
                 localVideoView.release()
@@ -768,7 +853,7 @@ class VideoCallActivity : ComponentActivity() {
             WebSocketManager.getInstance().removeWebRTCSignalListener(webRTCSignalListener)
             WebSocketManager.getInstance().removeWebRTCStatusListener(webRTCStatusListener)
 
-            // Timber.d("WebRTC资源清理完成")
+            Timber.d("WebRTC资源清理完成")
 
         } catch (e: Exception) {
             Timber.e(e, "清理WebRTC资源时出错")
