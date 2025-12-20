@@ -7,6 +7,15 @@ spring:
     url: jdbc:mysql://localhost:3306/psychological_consultation_system?useSSL=false
     username: root
     password: 123456
+    # 配置HikariCP连接池
+    type: com.zaxxer.hikari.HikariDataSource
+    hikari:
+      minimum-idle: 5 # 最小空闲连接数
+      maximum-pool-size: 20 # 最大连接数
+      connection-timeout: 30000 # 连接超时时间（毫秒）
+      idle-timeout: 600000 # 空闲连接超时时间（毫秒）
+      max-lifetime: 1800000 # 连接最大生命周期（毫秒）
+      connection-test-query: SELECT 1 # 连接测试查询
   ai:
     openai:
       api-key: sk-d1b70d8a21fc4337ae08674ee7608184

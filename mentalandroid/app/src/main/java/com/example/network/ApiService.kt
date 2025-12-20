@@ -1,13 +1,7 @@
 package com.example.network
 
 
-import com.example.model.Counselor
-import com.example.model.LearningPackage
-import com.example.model.LearningVideo
-import com.example.model.Message
-import com.example.model.QuickConsultation
-import com.example.model.SearchCounselorsRequest
-import com.example.model.User
+import com.example.model.*
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.http.*
@@ -157,5 +151,82 @@ interface ApiService {
      */
     @POST("api/users/login")
     suspend fun loginUser(@Body loginRequest: Map<String, String>): ApiResponse<User>
+
+    /**
+     * 根据学习包ID获取测试题目
+     * @param learningPackageId 学习包ID
+     * @return ApiResponse<List<TestQuestions>> 测试题目列表
+     */
+    @GET("api/tests/questions")
+    suspend fun getQuestionsByLearningPackageId(@Query("learningPackageId") learningPackageId: Long): ApiResponse<List<TestQuestions>>
+
+    /**
+     * 创建测试记录
+     * @param userId 用户ID
+     * @param learningPackageId 学习包ID
+     * @param totalQuestions 总题目数
+     * @return ApiResponse<TestRecords> 测试记录
+     */
+    @POST("api/tests/records")
+    suspend fun createTestRecord(@Query("userId") userId: Long, @Query("learningPackageId") learningPackageId: Long, @Query("totalQuestions") totalQuestions: Int): ApiResponse<TestRecords>
+
+    /**
+     * 保存用户答案
+     * @param testAnswer 用户答案
+     * @return ApiResponse<Boolean> 保存结果
+     */
+    @POST("api/tests/answers")
+    suspend fun saveTestAnswer(@Body testAnswer: TestAnswers): ApiResponse<Boolean>
+
+    /**
+     * 完成测试
+     * @param testRecordId 测试记录ID
+     * @param correctAnswers 正确答案数
+     * @param score 得分
+     * @param timeSpentSeconds 用时（秒）
+     * @return ApiResponse<TestRecords> 测试记录
+     */
+    @PUT("api/tests/records/{testRecordId}/complete")
+    suspend fun completeTest(@Path("testRecordId") testRecordId: Long, @Query("correctAnswers") correctAnswers: Int, @Query("score") score: Int, @Query("timeSpentSeconds") timeSpentSeconds: Int): ApiResponse<TestRecords>
+
+    /**
+     * 获取用户测试记录
+     * @param userId 用户ID
+     * @return ApiResponse<List<TestRecords>> 测试记录列表
+     */
+    @GET("api/tests/records/user/{userId}")
+    suspend fun getUserTestRecords(@Path("userId") userId: Long): ApiResponse<List<TestRecords>>
+
+    /**
+     * 获取测试记录详情
+     * @param testRecordId 测试记录ID
+     * @return ApiResponse<TestRecords> 测试记录
+     */
+    @GET("api/tests/records/{testRecordId}")
+    suspend fun getTestRecordDetail(@Path("testRecordId") testRecordId: Long): ApiResponse<TestRecords>
+
+    /**
+     * 根据测试记录ID获取答题详情
+     * @param testRecordId 测试记录ID
+     * @return ApiResponse<List<TestAnswers>> 答题详情列表
+     */
+    @GET("api/tests/answers/{testRecordId}")
+    suspend fun getAnswersByTestRecordId(@Path("testRecordId") testRecordId: Long): ApiResponse<List<TestAnswers>>
+
+    /**
+     * 根据测试记录ID获取评估报告
+     * @param testRecordId 测试记录ID
+     * @return ApiResponse<PsychologicalAssessments> 评估报告
+     */
+    @GET("api/tests/assessments/{testRecordId}")
+    suspend fun getAssessmentByTestRecordId(@Path("testRecordId") testRecordId: Long): ApiResponse<PsychologicalAssessments>
+
+    /**
+     * 生成评估报告
+     * @param assessment 评估报告信息
+     * @return ApiResponse<PsychologicalAssessments> 生成的评估报告
+     */
+    @POST("api/tests/assessments")
+    suspend fun generateAssessment(@Body assessment: PsychologicalAssessments): ApiResponse<PsychologicalAssessments>
 
 }

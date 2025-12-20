@@ -1,6 +1,7 @@
 package com.example.ui.features
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -222,6 +223,27 @@ class VideoDetailActivity : AppCompatActivity() {
                 } else if (!isLoading) {
                     item {
                         EmptyContainer()
+                    }
+                }
+                
+                // 测试题入口按钮
+                item {
+                    Button(
+                        onClick = {
+                            val intent = Intent(context, TestQuestionsActivity::class.java)
+                            intent.putExtra("learningPackageId", learningPackageId)
+                            intent.putExtra("learningPackageTitle", learningPackageTitle)
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Text(text = "开始测试")
                     }
                 }
             }
